@@ -67,8 +67,9 @@ async function checkCurrentSession() {
     }
   } catch (err) {
     hasActiveSession = false;
+    const safeMsg = err.message.includes('ECONNREFUSED') ? 'Backend unavailable' : err.message;
     sendToUI('session-update', 'No Active Work Session');
-    sendToUI('connection-update', err.message);
+    sendToUI('connection-update', safeMsg);
   }
 }
 
@@ -83,8 +84,9 @@ async function syncActivityStatus(status) {
     sendToUI('connection-update', 'Connected');
     sendToUI('sync-update', `Last synced: ${new Date().toLocaleTimeString()}`);
   } catch (err) {
-    sendToUI('connection-update', err.message);
-    sendToUI('sync-update', `Sync failed: ${err.message}`);
+    const safeMsg = err.message.includes('ECONNREFUSED') ? 'Backend unavailable' : err.message;
+    sendToUI('connection-update', safeMsg);
+    sendToUI('sync-update', `Sync failed: ${safeMsg}`);
   }
 }
 

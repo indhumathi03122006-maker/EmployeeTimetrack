@@ -15,25 +15,25 @@ const protect = async (req, res, next) => {
       req.user = await User.findById(decoded.id).select('-password');
       
       if (!req.user) {
-         return res.status(401).json({ success: false, message: 'User not found' });
+         return res.status(401).json({ success: false, message: 'Authentication required' });
       }
       
       next();
     } catch (error) {
-      console.error(error);
-      res.status(401).json({ success: false, message: 'Not authorized, token failed' });
+      console.error('[DEBUG] JWT verification failed');
+      res.status(401).json({ success: false, message: 'Invalid or expired token' });
     }
   }
 
   if (!token) {
-    res.status(401).json({ success: false, message: 'Not authorized, no token' });
+    res.status(401).json({ success: false, message: 'Authentication required' });
   }
 };
 
 const authorize = (...roles) => {
   return (req, res, next) => {
     if (!req.user || !roles.includes(req.user.role)) {
-      return res.status(403).json({ success: false, message: `User role ${req.user ? req.user.role : 'unknown'} is not authorized to access this route` });
+      return res.status(403).json({ success: false, message: 'Access denied' });
     }
     next();
   };

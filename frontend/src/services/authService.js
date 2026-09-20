@@ -1,7 +1,9 @@
+import { handleResponse, handleFetchError } from './apiHelper';
 const API_URL = 'http://localhost:5000/api/auth';
 
 const login = async (email, password) => {
-  const response = await fetch(`${API_URL}/login`, {
+  try {
+    const response = await fetch(`${API_URL}/login`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -9,15 +11,16 @@ const login = async (email, password) => {
     body: JSON.stringify({ email, password }),
   });
   
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.message || 'Login failed');
+    const data = await handleResponse(response, 'Login failed');
+    return data.data;
+  } catch (error) {
+    handleFetchError(error);
   }
-  return data.data;
 };
 
 const register = async (userData) => {
-  const response = await fetch(`${API_URL}/register`, {
+  try {
+    const response = await fetch(`${API_URL}/register`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -25,30 +28,32 @@ const register = async (userData) => {
     body: JSON.stringify(userData),
   });
 
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.message || 'Registration failed');
+    const data = await handleResponse(response, 'Registration failed');
+    return data.data;
+  } catch (error) {
+    handleFetchError(error);
   }
-  return data.data;
 };
 
 const getCurrentUser = async (token) => {
-  const response = await fetch(`${API_URL}/me`, {
+  try {
+    const response = await fetch(`${API_URL}/me`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
   });
 
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.message || 'Failed to fetch user');
+    const data = await handleResponse(response, 'Failed to fetch user');
+    return data.data;
+  } catch (error) {
+    handleFetchError(error);
   }
-  return data.data;
 };
 
 const updateProfile = async (profileData) => {
-  const token = localStorage.getItem('token');
-  const response = await fetch(`${API_URL}/profile`, {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_URL}/profile`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -56,16 +61,17 @@ const updateProfile = async (profileData) => {
     },
     body: JSON.stringify(profileData),
   });
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.message || 'Failed to update profile');
+    const data = await handleResponse(response, 'Failed to update profile');
+    return data;
+  } catch (error) {
+    handleFetchError(error);
   }
-  return data;
 };
 
 const changePassword = async (passwordData) => {
-  const token = localStorage.getItem('token');
-  const response = await fetch(`${API_URL}/change-password`, {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_URL}/change-password`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -73,11 +79,11 @@ const changePassword = async (passwordData) => {
     },
     body: JSON.stringify(passwordData),
   });
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.message || 'Failed to change password');
+    const data = await handleResponse(response, 'Failed to change password');
+    return data;
+  } catch (error) {
+    handleFetchError(error);
   }
-  return data;
 };
 
 export default {

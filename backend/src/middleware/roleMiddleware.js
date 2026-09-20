@@ -3,7 +3,7 @@ const requireRole = (role) => {
     if (req.user && req.user.role === role) {
       next();
     } else {
-      res.status(403).json({ success: false, message: `Not authorized as a ${role}` });
+      res.status(403).json({ success: false, message: 'Access denied' });
     }
   };
 };
