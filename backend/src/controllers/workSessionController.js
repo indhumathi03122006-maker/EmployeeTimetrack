@@ -91,6 +91,16 @@ const updateActivity = async (req, res) => {
       });
     }
 
+    if (session.status === status) {
+      // Periodic heartbeat received without a status change.
+      // Do not reset the timer, do not double-count duration, and do not update lastActivityAt.
+      return res.json({
+        success: true,
+        message: 'Status unchanged',
+        session
+      });
+    }
+
     const now = new Date();
     
     if (session.lastActivityAt) {

@@ -231,12 +231,21 @@ const getTeamReports = async (req, res) => {
             ws.attendance.toString() === record._id.toString()
         );
 
+        const now = new Date();
         let totalActive = 0;
         let totalIdle = 0;
 
         dailySessions.forEach(session => {
-            totalActive += session.activeDuration || 0;
-            totalIdle += session.idleDuration || 0;
+            let additionalActive = 0;
+            let additionalIdle = 0;
+            if ((session.status === 'active' || session.status === 'idle') && session.lastActivityAt) {
+                const elapsedMinutes = (now - session.lastActivityAt) / (1000 * 60);
+                if (session.status === 'active') additionalActive = elapsedMinutes;
+                else if (session.status === 'idle') additionalIdle = elapsedMinutes;
+            }
+
+            totalActive += (session.activeDuration || 0) + additionalActive;
+            totalIdle += (session.idleDuration || 0) + additionalIdle;
         });
 
         return {

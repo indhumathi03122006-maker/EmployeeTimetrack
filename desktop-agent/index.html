@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>EmployeeTrack Activity Agent</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      padding: 20px;
+      margin: 0;
+      background-color: #f8fafc;
+      color: #334155;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .header {
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 12px;
+      margin-bottom: 8px;
+    }
+    h1 {
+      font-size: 18px;
+      margin: 0;
+      color: #0f172a;
+    }
+    .status-card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .row:last-child {
+      margin-bottom: 0;
+    }
+    .label {
+      font-weight: 600;
+      color: #64748b;
+      font-size: 14px;
+    }
+    .value {
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .badge {
+      padding: 4px 8px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .active { background-color: #dcfce7; color: #16a34a; }
+    .idle { background-color: #fee2e2; color: #ef4444; }
+    .disconnected { color: #ef4444; font-weight: 600; }
+    .connected { color: #16a34a; font-weight: 600; }
+    .neutral { color: #64748b; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Activity Agent</h1>
+  </div>
+
+  <div class="status-card">
+    <div class="row">
+      <span class="label">Connection</span>
+      <span class="value connected" id="connection-status">● Connected</span>
+    </div>
+    <div class="row">
+      <span class="label">Work Session</span>
+      <span class="value" id="work-session-status">Checking...</span>
+    </div>
+    <div class="row">
+      <span class="label">Activity</span>
+      <span class="value badge neutral" id="status-badge">-</span>
+    </div>
+    <div class="row">
+      <span class="label">Last Activity</span>
+      <span class="value" id="last-activity">-</span>
+    </div>
+    <div class="row">
+      <span class="label">Idle Threshold</span>
+      <span class="value">5 Minutes</span>
+    </div>
+    <div class="row" style="margin-top: 16px; padding-top: 12px; border-top: 1px solid #e2e8f0">
+      <span class="label">Sync</span>
+      <span class="value" id="sync-status" style="font-size: 12px; color: #94a3b8">Waiting...</span>
+    </div>
+  </div>
+
+  <script>
+    window.electronAPI.onActivityUpdate((data) => {
+      const badge = document.getElementById('status-badge');
+      if (data.status === 'active') {
+        badge.className = 'value badge active';
+        badge.innerText = 'Active';
+      } else {
+        badge.className = 'value badge idle';
+        badge.innerText = 'Idle';
+      }
+      document.getElementById('last-activity').innerText = new Date(data.lastActivityAt).toLocaleTimeString();
+    });
+
+    window.electronAPI.onConnectionUpdate((status) => {
+      const el = document.getElementById('connection-status');
+      el.innerText = `● ${status}`;
+      if (status === 'Connected') el.className = 'value connected';
+      else el.className = 'value disconnected';
+    });
+
+    window.electronAPI.onSessionUpdate((status) => {
+      document.getElementById('work-session-status').innerText = status;
+      if (status === 'No Active Work Session') {
+        document.getElementById('status-badge').className = 'value badge neutral';
+        document.getElementById('status-badge').innerText = '-';
+      }
+    });
+
+    window.electronAPI.onSyncUpdate((message) => {
+      document.getElementById('sync-status').innerText = message;
+    });
+  </script>
+</body>
+</html>

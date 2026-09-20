@@ -197,14 +197,24 @@ const getReport = async (req, res) => {
       attendance: { $in: attendanceIds }
     }).lean();
 
+    const now = new Date();
     const workSessionMap = {};
     workSessions.forEach(ws => {
       const attId = ws.attendance.toString();
       if (!workSessionMap[attId]) {
         workSessionMap[attId] = { activeDuration: 0, idleDuration: 0 };
       }
-      workSessionMap[attId].activeDuration += ws.activeDuration || 0;
-      workSessionMap[attId].idleDuration += ws.idleDuration || 0;
+
+      let additionalActive = 0;
+      let additionalIdle = 0;
+      if ((ws.status === 'active' || ws.status === 'idle') && ws.lastActivityAt) {
+        const elapsedMinutes = (now - ws.lastActivityAt) / (1000 * 60);
+        if (ws.status === 'active') additionalActive = elapsedMinutes;
+        else if (ws.status === 'idle') additionalIdle = elapsedMinutes;
+      }
+
+      workSessionMap[attId].activeDuration += (ws.activeDuration || 0) + additionalActive;
+      workSessionMap[attId].idleDuration += (ws.idleDuration || 0) + additionalIdle;
     });
 
     let totalWorkingDays = attendanceRecords.length;
