@@ -64,8 +64,10 @@ const ManagerWorkTime = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   
-  const todayStr = new Date().toISOString().split('T')[0];
-  const [startDate, setStartDate] = useState(todayStr);
+  const d = new Date();
+  const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const firstDayOfMonthStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+  const [startDate, setStartDate] = useState(firstDayOfMonthStr);
   const [endDate, setEndDate] = useState(todayStr);
 
   const fetchData = async () => {

@@ -1,13 +1,15 @@
 import React, { useContext, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
+import { ThemeContext } from '../../context/ThemeContext';
 import authService from '../../services/authService';
 import { EmployeeSidebar } from './EmployeeDashboard';
-import { AlertCircle, CheckCircle2, User, Lock, Info } from 'lucide-react';
+import { AlertCircle, CheckCircle2, User, Lock, Settings as SettingsIcon, Monitor, Sun, Moon } from 'lucide-react';
 import './EmployeeDashboard.css';
 
 const Settings = () => {
   const { user, logout, setUser } = useContext(AuthContext);
+  const { themePreference, setThemePreference } = useContext(ThemeContext);
   const navigate = useNavigate();
 
   // Profile Edit State
@@ -36,7 +38,7 @@ const Settings = () => {
 
     try {
       const res = await authService.updateProfile({ name, department });
-      setUser(res.data); // Update AuthContext
+      setUser(res.data);
       setProfileSuccess('Profile updated successfully.');
       setIsEditing(false);
       setTimeout(() => setProfileSuccess(''), 3000);
@@ -72,11 +74,6 @@ const Settings = () => {
     }
   };
 
-  const formatDate = (dateStr) => {
-    if (!dateStr) return '—';
-    return new Date(dateStr).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-  };
-
   if (!user) {
     return (
       <div className="dashboard-layout">
@@ -93,188 +90,233 @@ const Settings = () => {
       <EmployeeSidebar user={user} onLogout={handleLogout} />
 
       <main className="dashboard-main">
-        <h1 className="dashboard-page-title">Settings</h1>
-        <p className="dashboard-page-subtitle">Manage your profile and account settings.</p>
+        <div style={{ width: '90%', maxWidth: '1000px', margin: '0 auto' }}>
+          <header className="dashboard-header" style={{ marginBottom: '24px' }}>
+            <div>
+              <h1 className="dashboard-page-title" style={{ marginBottom: '8px' }}>Settings</h1>
+              <p className="dashboard-page-subtitle" style={{ marginBottom: '0' }}>Manage your profile and account settings.</p>
+            </div>
+          </header>
 
-        <div className="dashboard-grid" style={{ gridTemplateColumns: '1fr', maxWidth: '600px' }}>
-          
-          {/* ── Profile Information ──────────────────────────────── */}
-          <div className="dash-card">
-            <div className="dash-card-header">
-              <div className="dash-card-icon"><User size={16} /></div>
-              <p className="dash-card-title">Profile Information</p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }}>
+            
+            {/* ── Profile Information ──────────────────────────────── */}
+            <div className="dash-card">
+              <div className="dash-card-header">
+                <div className="dash-card-icon"><User size={16} /></div>
+                <p className="dash-card-title">Profile Information</p>
+              </div>
+
+              {profileError && (
+                <div className="dash-error" style={{ marginBottom: '16px' }}>
+                  <AlertCircle size={15} /> {profileError}
+                </div>
+              )}
+              {profileSuccess && (
+                <div className="dash-info" style={{ marginBottom: '16px' }}>
+                  <CheckCircle2 size={15} /> {profileSuccess}
+                </div>
+              )}
+
+              {!isEditing ? (
+                <>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
+                    <div className="attendance-row" style={{ borderBottom: 'none', padding: '8px 0' }}>
+                      <span className="attendance-label" style={{ display: 'block', fontSize: '13px', marginBottom: '4px' }}>Name</span>
+                      <span className="attendance-value" style={{ fontWeight: '600', fontSize: '15px' }}>{user.name}</span>
+                    </div>
+                    <div className="attendance-row" style={{ borderBottom: 'none', padding: '8px 0' }}>
+                      <span className="attendance-label" style={{ display: 'block', fontSize: '13px', marginBottom: '4px' }}>Email</span>
+                      <span className="attendance-value" style={{ fontSize: '15px' }}>{user.email}</span>
+                    </div>
+                    <div className="attendance-row" style={{ borderBottom: 'none', padding: '8px 0' }}>
+                      <span className="attendance-label" style={{ display: 'block', fontSize: '13px', marginBottom: '4px' }}>Department</span>
+                      <span className="attendance-value" style={{ fontSize: '15px' }}>{user.department || '—'}</span>
+                    </div>
+                    <div className="attendance-row" style={{ borderBottom: 'none', padding: '8px 0' }}>
+                      <span className="attendance-label" style={{ display: 'block', fontSize: '13px', marginBottom: '4px' }}>Role</span>
+                      <span className="attendance-value" style={{ textTransform: 'capitalize', fontSize: '15px' }}>{user.role}</span>
+                    </div>
+                    <div className="attendance-row" style={{ borderBottom: 'none', padding: '8px 0' }}>
+                      <span className="attendance-label" style={{ display: 'block', fontSize: '13px', marginBottom: '4px' }}>Account Status</span>
+                      <span className="attendance-value">
+                        <span className={`status-badge ${user.isActive !== false ? 'active' : 'ended'}`}>
+                          {user.isActive !== false ? 'Active' : 'Inactive'}
+                        </span>
+                      </span>
+                    </div>
+                    <div className="attendance-row" style={{ borderBottom: 'none', padding: '8px 0' }}></div>
+                  </div>
+                  <div className="btn-row" style={{ marginTop: '20px', borderTop: '1px solid var(--border-light)', paddingTop: '20px' }}>
+                    <button className="dash-btn primary" onClick={() => setIsEditing(true)}>Edit Profile</button>
+                  </div>
+                </>
+              ) : (
+                <form onSubmit={handleProfileSubmit}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-muted)', marginBottom: '6px' }}>Name</label>
+                      <input
+                        type="text"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        className="auth-input"
+                        style={{ margin: 0, padding: '10px 12px', width: '100%', boxSizing: 'border-box', background: 'var(--bg-primary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '6px' }}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-muted)', marginBottom: '6px' }}>Email (Read-only)</label>
+                      <input
+                        type="text"
+                        value={user.email}
+                        className="auth-input"
+                        style={{ margin: 0, padding: '10px 12px', width: '100%', boxSizing: 'border-box', background: 'var(--bg-hover)', color: 'var(--text-light)', border: '1px solid var(--border-color)', borderRadius: '6px', cursor: 'not-allowed' }}
+                        disabled
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-muted)', marginBottom: '6px' }}>Department</label>
+                      <input
+                        type="text"
+                        value={department}
+                        onChange={(e) => setDepartment(e.target.value)}
+                        className="auth-input"
+                        style={{ margin: 0, padding: '10px 12px', width: '100%', boxSizing: 'border-box', background: 'var(--bg-primary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '6px' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-muted)', marginBottom: '6px' }}>Role (Read-only)</label>
+                      <input
+                        type="text"
+                        value={user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                        className="auth-input"
+                        style={{ margin: 0, padding: '10px 12px', width: '100%', boxSizing: 'border-box', background: 'var(--bg-hover)', color: 'var(--text-light)', border: '1px solid var(--border-color)', borderRadius: '6px', cursor: 'not-allowed' }}
+                        disabled
+                      />
+                    </div>
+                  </div>
+                  <div className="btn-row" style={{ marginTop: '20px', borderTop: '1px solid var(--border-light)', paddingTop: '20px' }}>
+                    <button type="submit" className="dash-btn primary" disabled={profileLoading}>
+                      {profileLoading ? 'Saving...' : 'Save Changes'}
+                    </button>
+                    <button type="button" className="dash-btn secondary" onClick={() => {
+                      setIsEditing(false);
+                      setName(user.name);
+                      setDepartment(user.department);
+                      setProfileError('');
+                    }} disabled={profileLoading}>
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              )}
             </div>
 
-            {profileError && (
-              <div className="dash-error" style={{ marginBottom: '16px' }}>
-                <AlertCircle size={15} /> {profileError}
+            {/* ── Account ──────────────────────────────────── */}
+            <div className="dash-card">
+              <div className="dash-card-header">
+                <div className="dash-card-icon"><SettingsIcon size={16} /></div>
+                <p className="dash-card-title">Account</p>
               </div>
-            )}
-            {profileSuccess && (
-              <div className="dash-info" style={{ backgroundColor: '#f0fdf4', borderColor: '#bbf7d0', color: '#166534', marginBottom: '16px' }}>
-                <CheckCircle2 size={15} /> {profileSuccess}
+              
+              <div style={{ marginBottom: '16px' }}>
+                <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+                  Manage your account-related information and preferences.
+                </p>
+                <div className="attendance-row" style={{ borderBottom: 'none', padding: '8px 0' }}>
+                  <div style={{ flex: 1 }}>
+                    <span className="attendance-label" style={{ display: 'block', fontSize: '14px', color: 'var(--text-primary)', fontWeight: '600', marginBottom: '4px' }}>Appearance</span>
+                    <span className="attendance-value" style={{ display: 'block', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '400' }}>Choose your preferred color theme.</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button 
+                      onClick={() => setThemePreference('light')}
+                      style={{ padding: '8px 12px', borderRadius: '8px', border: `1px solid ${themePreference === 'light' ? 'var(--accent-blue)' : 'var(--border-color)'}`, background: themePreference === 'light' ? 'var(--accent-blue-light)' : 'var(--bg-primary)', color: themePreference === 'light' ? 'var(--accent-blue)' : 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '500' }}>
+                      <Sun size={14} /> Light
+                    </button>
+                    <button 
+                      onClick={() => setThemePreference('dark')}
+                      style={{ padding: '8px 12px', borderRadius: '8px', border: `1px solid ${themePreference === 'dark' ? 'var(--accent-blue)' : 'var(--border-color)'}`, background: themePreference === 'dark' ? 'var(--accent-blue-light)' : 'var(--bg-primary)', color: themePreference === 'dark' ? 'var(--accent-blue)' : 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '500' }}>
+                      <Moon size={14} /> Dark
+                    </button>
+                    <button 
+                      onClick={() => setThemePreference('system')}
+                      style={{ padding: '8px 12px', borderRadius: '8px', border: `1px solid ${themePreference === 'system' ? 'var(--accent-blue)' : 'var(--border-color)'}`, background: themePreference === 'system' ? 'var(--accent-blue-light)' : 'var(--bg-primary)', color: themePreference === 'system' ? 'var(--accent-blue)' : 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '500' }}>
+                      <Monitor size={14} /> System
+                    </button>
+                  </div>
+                </div>
               </div>
-            )}
+            </div>
 
-            {!isEditing ? (
-              <>
-                <div className="attendance-row">
-                  <span className="attendance-label">Name</span>
-                  <span className="attendance-value" style={{ fontWeight: '600' }}>{user.name}</span>
+            {/* ── Change Password ──────────────────────────────────── */}
+            <div className="dash-card">
+              <div className="dash-card-header">
+                <div className="dash-card-icon"><Lock size={16} /></div>
+                <p className="dash-card-title">Change Password</p>
+              </div>
+
+              <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+                Update your password to keep your account secure.
+              </p>
+
+              {passwordError && (
+                <div className="dash-error" style={{ marginBottom: '16px' }}>
+                  <AlertCircle size={15} /> {passwordError}
                 </div>
-                <div className="attendance-row">
-                  <span className="attendance-label">Email</span>
-                  <span className="attendance-value">{user.email}</span>
+              )}
+              {passwordSuccess && (
+                <div className="dash-info" style={{ marginBottom: '16px' }}>
+                  <CheckCircle2 size={15} /> {passwordSuccess}
                 </div>
-                <div className="attendance-row">
-                  <span className="attendance-label">Department</span>
-                  <span className="attendance-value">{user.department || '—'}</span>
+              )}
+
+              <form onSubmit={handlePasswordSubmit}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-muted)', marginBottom: '6px' }}>Current Password</label>
+                    <input
+                      type="password"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      className="auth-input"
+                      style={{ margin: 0, padding: '10px 12px', width: '100%', boxSizing: 'border-box', background: 'var(--bg-primary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '6px' }}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-muted)', marginBottom: '6px' }}>New Password</label>
+                    <input
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="auth-input"
+                      style={{ margin: 0, padding: '10px 12px', width: '100%', boxSizing: 'border-box', background: 'var(--bg-primary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '6px' }}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-muted)', marginBottom: '6px' }}>Confirm Password</label>
+                    <input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="auth-input"
+                      style={{ margin: 0, padding: '10px 12px', width: '100%', boxSizing: 'border-box', background: 'var(--bg-primary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '6px' }}
+                      required
+                    />
+                  </div>
                 </div>
-                <div className="attendance-row">
-                  <span className="attendance-label">Role</span>
-                  <span className="attendance-value" style={{ textTransform: 'capitalize' }}>{user.role}</span>
-                </div>
-                <div className="attendance-row" style={{ borderBottom: 'none' }}>
-                  <span className="attendance-label">Account Status</span>
-                  <span className="attendance-value">
-                    <span className={`status-badge ${user.isActive !== false ? 'present' : 'absent'}`}>
-                      {user.isActive !== false ? 'Active' : 'Inactive'}
-                    </span>
-                  </span>
-                </div>
-                <div className="btn-row" style={{ marginTop: '16px' }}>
-                  <button className="dash-btn primary" onClick={() => setIsEditing(true)}>Edit Profile</button>
-                </div>
-              </>
-            ) : (
-              <form onSubmit={handleProfileSubmit}>
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#64748b', marginBottom: '6px' }}>Name</label>
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="auth-input"
-                    style={{ margin: 0, padding: '8px 12px', width: '100%', boxSizing: 'border-box' }}
-                    required
-                  />
-                </div>
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#64748b', marginBottom: '6px' }}>Department</label>
-                  <input
-                    type="text"
-                    value={department}
-                    onChange={(e) => setDepartment(e.target.value)}
-                    className="auth-input"
-                    style={{ margin: 0, padding: '8px 12px', width: '100%', boxSizing: 'border-box' }}
-                  />
-                </div>
-                <div className="btn-row">
-                  <button type="submit" className="dash-btn primary" disabled={profileLoading}>
-                    {profileLoading ? 'Saving...' : 'Save Changes'}
-                  </button>
-                  <button type="button" className="dash-btn secondary" onClick={() => {
-                    setIsEditing(false);
-                    setName(user.name);
-                    setDepartment(user.department);
-                    setProfileError('');
-                  }} disabled={profileLoading}>
-                    Cancel
+                <div className="btn-row" style={{ marginTop: '20px', borderTop: '1px solid var(--border-light)', paddingTop: '20px', justifyContent: 'flex-start' }}>
+                  <button type="submit" className="dash-btn danger" disabled={passwordLoading}>
+                    {passwordLoading ? 'Updating...' : 'Change Password'}
                   </button>
                 </div>
               </form>
-            )}
+            </div>
+
           </div>
-
-          {/* ── Change Password ──────────────────────────────────── */}
-          <div className="dash-card">
-            <div className="dash-card-header">
-              <div className="dash-card-icon"><Lock size={16} /></div>
-              <p className="dash-card-title">Change Password</p>
-            </div>
-
-            {passwordError && (
-              <div className="dash-error" style={{ marginBottom: '16px' }}>
-                <AlertCircle size={15} /> {passwordError}
-              </div>
-            )}
-            {passwordSuccess && (
-              <div className="dash-info" style={{ backgroundColor: '#f0fdf4', borderColor: '#bbf7d0', color: '#166534', marginBottom: '16px' }}>
-                <CheckCircle2 size={15} /> {passwordSuccess}
-              </div>
-            )}
-
-            <form onSubmit={handlePasswordSubmit}>
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#64748b', marginBottom: '6px' }}>Current Password</label>
-                <input
-                  type="password"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  className="auth-input"
-                  style={{ margin: 0, padding: '8px 12px', width: '100%', boxSizing: 'border-box' }}
-                  required
-                />
-              </div>
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#64748b', marginBottom: '6px' }}>New Password</label>
-                <input
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="auth-input"
-                  style={{ margin: 0, padding: '8px 12px', width: '100%', boxSizing: 'border-box' }}
-                  required
-                />
-              </div>
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#64748b', marginBottom: '6px' }}>Confirm Password</label>
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="auth-input"
-                  style={{ margin: 0, padding: '8px 12px', width: '100%', boxSizing: 'border-box' }}
-                  required
-                />
-              </div>
-              <div className="btn-row">
-                <button type="submit" className="dash-btn danger" disabled={passwordLoading}>
-                  {passwordLoading ? 'Updating...' : 'Change Password'}
-                </button>
-              </div>
-            </form>
-          </div>
-
-          {/* ── Account Information ──────────────────────────────── */}
-          <div className="dash-card">
-            <div className="dash-card-header">
-              <div className="dash-card-icon"><Info size={16} /></div>
-              <p className="dash-card-title">Account Information</p>
-            </div>
-            
-            <div className="attendance-row">
-              <span className="attendance-label">Role</span>
-              <span className="attendance-value" style={{ textTransform: 'capitalize' }}>{user.role}</span>
-            </div>
-            <div className="attendance-row">
-              <span className="attendance-label">Account Status</span>
-              <span className="attendance-value">
-                <span className={`status-badge ${user.isActive !== false ? 'present' : 'absent'}`}>
-                  {user.isActive !== false ? 'Active' : 'Inactive'}
-                </span>
-              </span>
-            </div>
-            <div className="attendance-row">
-              <span className="attendance-label">Email</span>
-              <span className="attendance-value">{user.email}</span>
-            </div>
-            <div className="attendance-row" style={{ borderBottom: 'none' }}>
-              <span className="attendance-label">Member Since</span>
-              <span className="attendance-value">{formatDate(user.createdAt)}</span>
-            </div>
-          </div>
-
         </div>
       </main>
     </div>

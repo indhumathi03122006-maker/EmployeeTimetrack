@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const Attendance = require('../models/Attendance');
 const WorkSession = require('../models/WorkSession');
+const fillAbsentRecords = require('../utils/fillAbsent');
 
 // Helper to get consistent today's date (server time, midnight)
 const getTodayDate = () => {
@@ -105,9 +106,11 @@ const getTeamAttendance = async (req, res) => {
       .populate('user', 'name email department')
       .sort({ date: -1 });
 
+    const filledRecords = fillAbsentRecords(teamMembers, attendanceRecords, 'attendance', startDate, endDate);
+
     res.status(200).json({
       success: true,
-      data: attendanceRecords,
+      data: filledRecords,
     });
   } catch (error) {
     console.error('Error in getTeamAttendance:', error);
@@ -141,9 +144,11 @@ const getTeamWorkSessions = async (req, res) => {
       .populate('user', 'name email department')
       .sort({ startTime: -1 });
 
+    const filledSessions = fillAbsentRecords(teamMembers, workSessions, 'workSession', startDate, endDate);
+
     res.status(200).json({
       success: true,
-      data: workSessions,
+      data: filledSessions,
     });
   } catch (error) {
     console.error('Error in getTeamWorkSessions:', error);
@@ -261,9 +266,12 @@ const getTeamReports = async (req, res) => {
         };
     });
 
+    const targetMembers = teamMembers.filter(m => targetUserIds.includes(m._id.toString()) || targetUserIds.some(id => id.toString() === m._id.toString()));
+    const filledReportData = fillAbsentRecords(targetMembers, reportData, 'report', startDate, endDate);
+
     res.status(200).json({
       success: true,
-      data: reportData,
+      data: filledReportData,
     });
   } catch (error) {
     console.error('Error in getTeamReports:', error);

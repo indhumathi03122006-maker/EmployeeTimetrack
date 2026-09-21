@@ -12,17 +12,11 @@ import {
   Settings,
   Users
 } from 'lucide-react';
+import SidebarBrand from './SidebarBrand';
 
 export const ManagerSidebar = ({ user, onLogout, unreadCount = 0 }) => (
   <aside className="dashboard-sidebar">
-    <div className="sidebar-brand">
-      <Clock size={20} />
-      <span>
-        <span className="brand-employee">Employee</span>
-        <span className="brand-track">Track</span>
-      </span>
-      <span style={{ fontSize: '10px', marginLeft: '4px', background: '#e2e8f0', color: '#475569', padding: '2px 4px', borderRadius: '4px' }}>MGR</span>
-    </div>
+    <SidebarBrand role="MANAGER" />
 
     <nav className="sidebar-nav">
       <NavLink to="/manager/dashboard" className={({ isActive }) => isActive ? 'active-link' : ''}>
@@ -59,6 +53,9 @@ export const ManagerSidebar = ({ user, onLogout, unreadCount = 0 }) => (
         <strong>{user?.name}</strong>
         {user?.role}
       </div>
+      <NavLink to="/employee/dashboard" className="dash-btn secondary" style={{ marginBottom: '10px', display: 'flex', justifyContent: 'center', width: '100%' }}>
+         My Tracking
+      </NavLink>
       <button className="dash-btn logout-btn" onClick={onLogout}>
         <LogOut size={14} /> Logout
       </button>

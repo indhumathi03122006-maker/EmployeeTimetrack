@@ -18,10 +18,32 @@ const protect = async (req, res, next) => {
          return res.status(401).json({ success: false, message: 'Authentication required' });
       }
       
-      next();
+      return next();
     } catch (error) {
-      console.error('[DEBUG] JWT verification failed');
-      res.status(401).json({ success: false, message: 'Invalid or expired token' });
+      // If JWT verification fails, check if it's an Agent Token
+      try {
+        const AgentDevice = require('../models/AgentDevice');
+        const allAgents = await AgentDevice.find({ isActive: true }).populate('user');
+        
+        let validAgent = null;
+        for (const agent of allAgents) {
+          if (await agent.verifyToken(token)) {
+            validAgent = agent;
+            break;
+          }
+        }
+
+        if (validAgent && validAgent.user) {
+          req.user = validAgent.user;
+          req.agentDevice = validAgent;
+          return next();
+        }
+      } catch (agentError) {
+         console.error('[DEBUG] Agent verification failed:', agentError);
+      }
+
+      console.error('[DEBUG] JWT and Agent verification failed');
+      return res.status(401).json({ success: false, message: 'Invalid or expired token' });
     }
   }
 

@@ -1,6 +1,8 @@
 .manager-dashboard-container {
   max-width: 900px;
   width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .manager-stats-grid {
@@ -23,11 +25,11 @@
 }
 
 .manager-stat-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
 }
@@ -43,32 +45,32 @@
   font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
-  color: #64748b;
+  color: var(--text-muted);
   letter-spacing: 0.05em;
 }
 
 .manager-stat-value {
   font-size: 32px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--text-primary);
   line-height: 1;
 }
 
 .manager-overview-panel {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  box-shadow: var(--shadow-sm);
 }
 
 .manager-overview-heading {
   font-size: 16px;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--text-primary);
   margin: 0 0 20px 0;
   padding-bottom: 12px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .manager-overview-list {
@@ -85,11 +87,11 @@
 }
 
 .manager-overview-label {
-  color: #475569;
+  color: var(--text-secondary);
   font-weight: 500;
 }
 
 .manager-overview-val {
-  color: #0f172a;
+  color: var(--text-primary);
   font-weight: 600;
 }

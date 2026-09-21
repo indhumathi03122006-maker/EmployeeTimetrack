@@ -2,7 +2,28 @@ const { app, BrowserWindow } = require('electron');
 const path = require('path');
 const { startActivityDetection } = require('./activity/activityDetector');
 const workSessionApi = require('./api/workSessionApi');
+const agentApi = require('./api/agentApi');
 const config = require('./config');
+
+const fs = require('fs');
+const LOG_FILE = path.join(__dirname, 'agent-debug.log');
+function logDebug(msg) {
+  try {
+    fs.appendFileSync(LOG_FILE, `[${new Date().toISOString()}] ${msg}\n`);
+    console.log(msg);
+  } catch(e) {}
+}
+
+process.on('uncaughtException', (error) => {
+  logDebug(`[Agent] Uncaught Exception: ${error.message}\n${error.stack}`);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  logDebug(`[Agent] Unhandled Rejection at: ${promise} reason: ${reason}`);
+});
+
+logDebug(`[Agent] Electron starting with argv: ${process.argv.map(a => a.startsWith('employee-track') ? 'employee-track://[REDACTED]' : a).join(' | ')}`);
+
 
 let mainWindow;
 let hasActiveSession = false;
@@ -91,42 +112,162 @@ async function syncActivityStatus(status) {
 }
 
 // -----------------------------------------------------------------
+// Protocol & Single Instance Lock
+// -----------------------------------------------------------------
+const gotTheLock = app.requestSingleInstanceLock();
+logDebug(`[Agent] gotTheLock = ${gotTheLock}`);
+
+let isProtocolInstance = false;
+if (process.platform === 'win32' || process.platform === 'linux') {
+  const url = process.argv.length > 1 ? process.argv[process.argv.length - 1] : null;
+  if (url && url.startsWith('employee-track://')) {
+    isProtocolInstance = true;
+  }
+}
+
+if (!gotTheLock && !isProtocolInstance) {
+  logDebug('[Agent] Single instance lock not acquired and no protocol args. Exiting.');
+  app.quit();
+} else if (gotTheLock) {
+  logDebug('[Agent] Single instance lock acquired.');
+  app.on('second-instance', (event, commandLine, workingDirectory) => {
+    logDebug(`[Agent] second-instance fired: ${commandLine.join(' | ')}`);
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+    
+    // Windows/Linux protocol handler
+    const url = commandLine.pop();
+    logDebug(`[Agent] Protocol received (second-instance): ${url?.substring(0, 25)}`);
+    handleProtocol(url);
+  });
+}
+
+// macOS protocol handler
+app.on('open-url', (event, url) => {
+  event.preventDefault();
+  console.log('[Agent] Protocol received (open-url)', url?.substring(0, 25));
+  handleProtocol(url);
+});
+
+if (process.defaultApp) {
+  if (process.argv.length >= 2) {
+    app.setAsDefaultProtocolClient('employee-track', process.execPath, [path.resolve(process.argv[1])]);
+  }
+} else {
+  app.setAsDefaultProtocolClient('employee-track');
+}
+
+async function handleProtocol(url) {
+  if (typeof url !== 'string') return;
+  url = url.replace(/"/g, '').replace(/'/g, ''); // Strip quotes added by OS
+  if (!url.startsWith('employee-track://connect')) {
+    return;
+  }
+  
+  try {
+    const parsedUrl = new URL(url);
+    const code = parsedUrl.searchParams.get('code');
+    
+    if (code) {
+      logDebug('[Agent] Pairing request sent');
+      sendToUI('connection-update', 'Pairing...');
+      const res = await agentApi.pairAgent(code);
+      if (res.statusCode === 200 && res.data?.success && res.data?.agentToken) {
+        logDebug('[Agent] Pairing successful');
+        config.saveToken(res.data.agentToken);
+        sendToUI('connection-update', 'Paired successfully!');
+        checkCurrentSession();
+      } else {
+        logDebug(`[Agent] Pairing failed: ${res.statusCode}`);
+        sendToUI('connection-update', `Pairing failed: ${res.data?.message || res.statusCode}`);
+      }
+    }
+  } catch (err) {
+    logDebug(`[Agent] Protocol handler error: ${err.message}`);
+  }
+}
+
+// -----------------------------------------------------------------
 // Initialization
 // -----------------------------------------------------------------
 app.whenReady().then(() => {
-  createWindow();
+  logDebug('[Agent] app.whenReady fired');
+  if (gotTheLock) {
+    createWindow();
+    logDebug('[Agent] createWindow called');
+  }
 
-  // 1. Session Polling (Every 15 seconds)
-  checkCurrentSession();
-  setInterval(checkCurrentSession, 15000);
+  // Handle protocol if opened via CLI on Windows/Linux
+  if (process.platform === 'win32' || process.platform === 'linux') {
+    const url = process.argv.length > 1 ? process.argv[process.argv.length - 1] : null;
+    if (url && url.startsWith('employee-track://')) {
+        logDebug(`[Agent] Protocol received (CLI args): ${url.substring(0, 25)}`);
+        handleProtocol(url).then(() => {
+            if (!gotTheLock) {
+                logDebug('[Agent] Protocol handled by second instance. Quitting now.');
+                app.quit();
+            }
+        });
+    } else if (!gotTheLock) {
+        logDebug('[Agent] No protocol in CLI args for second instance. Quitting now.');
+        app.quit();
+    }
+  } else if (!gotTheLock) {
+    app.quit();
+  }
 
-  // 2. Activity Tracking (Local)
-  const THRESHOLD = 300; 
-  
-  startActivityDetection(THRESHOLD, (status, lastActivityAt) => {
-    if (hasActiveSession) {
-      sendToUI('activity-update', { status, lastActivityAt });
-      
-      // If status CHANGED, push to backend immediately
-      if (status !== lastKnownStatus) {
-        lastKnownStatus = status;
-        syncActivityStatus(status);
+  // Only run polling and activity tracking in the primary instance
+  if (gotTheLock) {
+    // 1. Session Polling (Every 15 seconds)
+    checkCurrentSession();
+    setInterval(checkCurrentSession, 15000);
+
+    // 2. Activity Tracking (Local)
+    const THRESHOLD = 300; 
+    
+    startActivityDetection(THRESHOLD, (status, lastActivityAt) => {
+      if (hasActiveSession) {
+        sendToUI('activity-update', { status, lastActivityAt });
+        
+        // If status CHANGED, push to backend immediately
+        if (status !== lastKnownStatus) {
+          lastKnownStatus = status;
+          syncActivityStatus(status);
+        }
       }
-    }
-  });
+    });
 
-  // 3. Periodic Activity Sync (Every 30 seconds)
-  setInterval(() => {
-    if (hasActiveSession) {
-      syncActivityStatus(lastKnownStatus);
-    }
-  }, 30000);
+    // 3. Periodic Activity Sync (Every 30 seconds)
+    setInterval(() => {
+      if (hasActiveSession) {
+        syncActivityStatus(lastKnownStatus);
+      }
+    }, 30000);
 
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
-  });
+    // 4. Periodic Heartbeat (Every 1 minute)
+    setInterval(async () => {
+      const token = config.DEVELOPMENT_JWT;
+      if (token) {
+        try {
+          await agentApi.sendHeartbeat(token);
+        } catch (err) {
+          // Silent heartbeat fail
+        }
+      }
+    }, 60000);
+
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    });
+  }
 });
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
+  logDebug('[Agent] window-all-closed fired');
+  if (process.platform !== 'darwin') {
+    logDebug('[Agent] calling app.quit() due to window-all-closed');
+    app.quit();
+  }
 });

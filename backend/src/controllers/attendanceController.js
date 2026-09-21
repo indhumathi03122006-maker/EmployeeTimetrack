@@ -45,6 +45,15 @@ const checkIn = async (req, res) => {
       'attendance'
     );
 
+    if (req.user.manager) {
+      createNotification(
+        req.user.manager,
+        'Employee Checked In',
+        `${req.user.name} checked in.`,
+        'attendance'
+      );
+    }
+
     res.status(201).json({
       success: true,
       message: 'Checked in successfully',
@@ -99,6 +108,15 @@ const checkOut = async (req, res) => {
       'Your attendance has been checked out successfully.',
       'checkout'
     );
+
+    if (req.user.manager) {
+      createNotification(
+        req.user.manager,
+        'Employee Checked Out',
+        `${req.user.name} checked out.`,
+        'checkout'
+      );
+    }
 
     res.json({
       success: true,

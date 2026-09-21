@@ -61,13 +61,81 @@ const getTeamReports = async (startDate, endDate, employeeId) => {
   return response.data;
 };
 
+const addEmployee = async (employeeData) => {
+  try {
+    const response = await fetch(`${API_URL}/employees`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders().headers
+      },
+      body: JSON.stringify(employeeData)
+    });
+    return await handleResponse(response, 'Failed to add employee');
+  } catch (error) {
+    handleFetchError(error);
+  }
+};
+
+const addManager = async (managerData) => {
+  try {
+    const response = await fetch(`${API_URL}/managers`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders().headers
+      },
+      body: JSON.stringify(managerData)
+    });
+    return await handleResponse(response, 'Failed to add manager');
+  } catch (error) {
+    handleFetchError(error);
+  }
+};
+
+const updateUser = async (userId, userData) => {
+  try {
+    const response = await fetch(`${API_URL}/users/${userId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders().headers
+      },
+      body: JSON.stringify(userData)
+    });
+    return await handleResponse(response, 'Failed to update user');
+  } catch (error) {
+    handleFetchError(error);
+  }
+};
+
+const updateUserStatus = async (userId, isActive) => {
+  try {
+    const response = await fetch(`${API_URL}/users/${userId}/status`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders().headers
+      },
+      body: JSON.stringify({ isActive })
+    });
+    return await handleResponse(response, 'Failed to update status');
+  } catch (error) {
+    handleFetchError(error);
+  }
+};
+
 const adminService = {
   getDashboardSummary,
   getTeamMembers, // Mapping to endpoints identically to reuse component logic
   getTeamAttendance,
   getTeamWorkSessions,
   getTeamCurrentActivity,
-  getTeamReports
+  getTeamReports,
+  addEmployee,
+  addManager,
+  updateUser,
+  updateUserStatus
 };
 
 export default adminService;

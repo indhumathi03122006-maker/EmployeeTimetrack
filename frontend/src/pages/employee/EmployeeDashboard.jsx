@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 import attendanceService from '../../services/attendanceService';
 import workSessionService from '../../services/workSessionService';
+import agentService from '../../services/agentService';
 import {
   Clock,
   LogIn,
@@ -19,6 +20,7 @@ import {
   Bell,
   Settings,
 } from 'lucide-react';
+import SidebarBrand from '../../components/SidebarBrand';
 import './EmployeeDashboard.css';
 
 /* ── Helpers ──────────────────────────────────────────── */
@@ -38,13 +40,7 @@ const formatMinutes = (mins) => {
 /* ── Sidebar shared component ─────────────────────────── */
 export const EmployeeSidebar = ({ user, onLogout, unreadCount = 0 }) => (
   <aside className="dashboard-sidebar">
-    <div className="sidebar-brand">
-      <Clock size={20} />
-      <span>
-        <span className="brand-employee">Employee</span>
-        <span className="brand-track">Track</span>
-      </span>
-    </div>
+    <SidebarBrand role="EMPLOYEE" />
 
     <nav className="sidebar-nav">
       <NavLink to="/employee/dashboard" className={({ isActive }) => isActive ? 'active-link' : ''}>
@@ -78,6 +74,11 @@ export const EmployeeSidebar = ({ user, onLogout, unreadCount = 0 }) => (
         <strong>{user?.name}</strong>
         {user?.role}
       </div>
+      {user?.role === 'manager' && (
+        <NavLink to="/manager/dashboard" className="dash-btn" style={{ marginBottom: '10px', display: 'flex', justifyContent: 'center', width: '100%' }}>
+           Manager View
+        </NavLink>
+      )}
       <button className="dash-btn logout-btn" onClick={onLogout}>
         <LogOut size={14} /> Logout
       </button>
@@ -93,6 +94,7 @@ const StatusBadge = ({ status }) => {
     ended:       { label: 'Ended',       cls: 'ended' },
     'not-started': { label: 'Not Started', cls: 'not-started' },
     present:     { label: 'Present',     cls: 'present' },
+    absent:      { label: 'Absent',      cls: 'not-started' },
   };
   const { label, cls } = map[status] || { label: status, cls: 'not-started' };
   return (
@@ -118,6 +120,8 @@ const EmployeeDashboard = () => {
   const [loadingStart,    setLoadingStart]    = useState(false);
   const [loadingActivity, setLoadingActivity] = useState(false);
   const [loadingEnd,      setLoadingEnd]      = useState(false);
+  
+  const [agentConnecting, setAgentConnecting] = useState(false);
 
   const [error, setError] = useState('');
 
@@ -176,11 +180,53 @@ const EmployeeDashboard = () => {
     setError('');
     setLoadingStart(true);
     try {
-      await workSessionService.startWorkSession();
-      await fetchState();
+      const statusRes = await agentService.getStatus();
+      if (statusRes && statusRes.connected) {
+        await workSessionService.startWorkSession();
+        await fetchState();
+        setLoadingStart(false);
+      } else {
+        setAgentConnecting(true);
+        console.log('[Frontend] Requesting pairing code');
+        const pairingRes = await agentService.requestPairingCode();
+        if (pairingRes && pairingRes.success) {
+          const code = pairingRes.code;
+          console.log('[Frontend] Launching agent with protocol');
+          const iframe = document.createElement('iframe');
+          iframe.style.display = 'none';
+          iframe.src = `employee-track://connect?code=${code}`;
+          document.body.appendChild(iframe);
+          setTimeout(() => document.body.removeChild(iframe), 2000);
+          
+          let timeElapsed = 0;
+          console.log('[Frontend] Waiting for agent connection...');
+          const pollInterval = setInterval(async () => {
+            timeElapsed += 3000;
+            const pollRes = await agentService.getStatus();
+            if (pollRes && pollRes.connected) {
+              console.log('[Frontend] Agent detected');
+              clearInterval(pollInterval);
+              setAgentConnecting(false);
+              await workSessionService.startWorkSession();
+              await fetchState();
+              setLoadingStart(false);
+            } else if (timeElapsed >= 120000) {
+              console.log('[Frontend] Waiting for agent timed out');
+              clearInterval(pollInterval);
+              setAgentConnecting(false);
+              setLoadingStart(false);
+              setError('Desktop Agent connection timed out. Please ensure it is installed and running.');
+            }
+          }, 3000);
+        } else {
+          setError('Failed to generate pairing code');
+          setAgentConnecting(false);
+          setLoadingStart(false);
+        }
+      }
     } catch (err) {
-      setError(err.message);
-    } finally {
+      setError(err.message || 'Error connecting to agent');
+      setAgentConnecting(false);
       setLoadingStart(false);
     }
   };
@@ -246,6 +292,50 @@ const EmployeeDashboard = () => {
             {error}
           </div>
         )}
+
+        <div className="dash-stats-grid">
+          <div className="dash-stat-card">
+            <div className="dash-stat-header">
+              <CalendarCheck size={16} style={{ color: '#3b82f6' }} />
+              <span className="dash-stat-label">Attendance</span>
+            </div>
+            <div className="dash-stat-value" style={{ fontSize: '24px', display: 'flex', alignItems: 'center', height: '100%' }}>
+              {isCheckedIn ? <StatusBadge status="present" /> : <StatusBadge status="absent" />}
+            </div>
+          </div>
+
+          <div className="dash-stat-card">
+            <div className="dash-stat-header">
+              <Timer size={16} style={{ color: '#22c55e' }} />
+              <span className="dash-stat-label">Work Time</span>
+            </div>
+            <div className="dash-stat-value">
+              {isCheckedOut && attendance?.workDuration > 0
+                ? formatMinutes(attendance.workDuration)
+                : formatMinutes(session?.activeDuration)}
+            </div>
+          </div>
+
+          <div className="dash-stat-card">
+            <div className="dash-stat-header">
+              <Pause size={16} style={{ color: '#f59e0b' }} />
+              <span className="dash-stat-label">Break Time</span>
+            </div>
+            <div className="dash-stat-value">
+              {formatMinutes(session?.idleDuration)}
+            </div>
+          </div>
+
+          <div className="dash-stat-card">
+            <div className="dash-stat-header">
+              <Activity size={16} style={{ color: '#8b5cf6' }} />
+              <span className="dash-stat-label">Current Status</span>
+            </div>
+            <div className="dash-stat-value" style={{ fontSize: '24px', display: 'flex', alignItems: 'center', height: '100%' }}>
+              <StatusBadge status={sessionStatus} />
+            </div>
+          </div>
+        </div>
 
         <div className="dashboard-grid">
           {/* ── Card A: Today's Attendance ─────────────── */}
@@ -357,11 +447,11 @@ const EmployeeDashboard = () => {
                 <button
                   className="dash-btn primary"
                   onClick={handleStartWork}
-                  disabled={loadingStart}
+                  disabled={loadingStart || agentConnecting}
                   id="btn-start-work"
                 >
                   <Play size={14} />
-                  {loadingStart ? 'Starting…' : 'Start Work'}
+                  {agentConnecting ? 'Waiting for Agent...' : loadingStart ? 'Starting…' : 'Start Work'}
                 </button>
               )}
 

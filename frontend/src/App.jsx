@@ -56,7 +56,7 @@ function App() {
       <Route 
         path="/employee/dashboard" 
         element={
-          <ProtectedRoute allowedRoles={['employee']}>
+          <ProtectedRoute allowedRoles={['employee', 'manager']}>
             <EmployeeDashboard />
           </ProtectedRoute>
         } 
@@ -65,7 +65,7 @@ function App() {
       <Route
         path="/employee/attendance"
         element={
-          <ProtectedRoute allowedRoles={['employee']}>
+          <ProtectedRoute allowedRoles={['employee', 'manager']}>
             <Attendance />
           </ProtectedRoute>
         }
@@ -74,7 +74,7 @@ function App() {
       <Route
         path="/employee/work-time"
         element={
-          <ProtectedRoute allowedRoles={['employee']}>
+          <ProtectedRoute allowedRoles={['employee', 'manager']}>
             <WorkTime />
           </ProtectedRoute>
         }
@@ -83,7 +83,7 @@ function App() {
       <Route
         path="/employee/current-activity"
         element={
-          <ProtectedRoute allowedRoles={['employee']}>
+          <ProtectedRoute allowedRoles={['employee', 'manager']}>
             <CurrentActivity />
           </ProtectedRoute>
         }
@@ -92,7 +92,7 @@ function App() {
       <Route
         path="/employee/reports"
         element={
-          <ProtectedRoute allowedRoles={['employee']}>
+          <ProtectedRoute allowedRoles={['employee', 'manager']}>
             <Reports />
           </ProtectedRoute>
         }
@@ -101,7 +101,7 @@ function App() {
       <Route
         path="/employee/settings"
         element={
-          <ProtectedRoute allowedRoles={['employee']}>
+          <ProtectedRoute allowedRoles={['employee', 'manager']}>
             <Settings />
           </ProtectedRoute>
         }
@@ -110,7 +110,7 @@ function App() {
       <Route
         path="/employee/notifications"
         element={
-          <ProtectedRoute allowedRoles={['employee']}>
+          <ProtectedRoute allowedRoles={['employee', 'manager']}>
             <Notifications />
           </ProtectedRoute>
         }

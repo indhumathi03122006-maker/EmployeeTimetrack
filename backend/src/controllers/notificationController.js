@@ -64,18 +64,19 @@ const markAsRead = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid notification ID' });
     }
 
-    // Find by both _id AND user so Employee A cannot modify Employee B's notification
-    const notification = await Notification.findOneAndUpdate(
-      { _id: id, user: userId },
-      { isRead: true },
-      { new: true }
-    );
+    let notification = await Notification.findOne({ _id: id, user: userId });
 
     if (!notification) {
       return res.status(404).json({
         success: false,
         message: 'Notification not found or does not belong to you'
       });
+    }
+
+    if (!notification.isRead) {
+      notification.isRead = true;
+      notification.readAt = new Date();
+      await notification.save();
     }
 
     res.json({ success: true, notification });
@@ -93,7 +94,7 @@ const markAllAsRead = async (req, res) => {
 
     const result = await Notification.updateMany(
       { user: userId, isRead: false },
-      { isRead: true }
+      { $set: { isRead: true, readAt: new Date() } }
     );
 
     res.json({

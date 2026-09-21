@@ -48,6 +48,7 @@ const register = async (req, res) => {
           name: user.name,
           email: user.email,
           role: user.role,
+          department: user.department,
           token,
         },
       });
@@ -82,6 +83,7 @@ const login = async (req, res) => {
           name: user.name,
           email: user.email,
           role: user.role,
+          department: user.department,
           token: generateToken(user._id),
         },
       });
@@ -111,8 +113,8 @@ const updateProfile = async (req, res) => {
     const user = await User.findById(req.user._id);
 
     if (user) {
-      user.name = req.body.name || user.name;
-      user.department = req.body.department || user.department;
+      user.name = req.body.name !== undefined ? req.body.name : user.name;
+      user.department = req.body.department !== undefined ? req.body.department : user.department;
 
       const updatedUser = await user.save();
 

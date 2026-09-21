@@ -55,6 +55,15 @@ const startWorkSession = async (req, res) => {
       'work-session'
     );
 
+    if (req.user.manager) {
+      createNotification(
+        req.user.manager,
+        'Work Session Started',
+        `${req.user.name} started work.`,
+        'work-session'
+      );
+    }
+
     res.status(201).json({
       success: true,
       message: 'Work session started',
@@ -117,6 +126,24 @@ const updateActivity = async (req, res) => {
     session.lastActivityAt = now;
 
     await session.save();
+
+    if (req.user.manager) {
+      if (status === 'idle') {
+        createNotification(
+          req.user.manager,
+          'Employee Idle',
+          `${req.user.name} is now idle.`,
+          'activity'
+        );
+      } else if (status === 'active') {
+        createNotification(
+          req.user.manager,
+          'Employee Active',
+          `${req.user.name} is active again.`,
+          'activity'
+        );
+      }
+    }
 
     res.json({
       success: true,
@@ -190,6 +217,23 @@ const endWorkSession = async (req, res) => {
     session.lastActivityAt = now;
 
     await session.save();
+
+    // Fire employee notification
+    createNotification(
+      userId,
+      'Work Session Ended',
+      'Your work session has ended.',
+      'work-session'
+    );
+
+    if (req.user.manager) {
+      createNotification(
+        req.user.manager,
+        'Work Session Ended',
+        `${req.user.name} ended their work session.`,
+        'work-session'
+      );
+    }
 
     res.json({
       success: true,

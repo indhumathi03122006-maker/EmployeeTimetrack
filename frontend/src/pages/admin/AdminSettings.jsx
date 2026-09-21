@@ -1,14 +1,16 @@
 import React, { useContext, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
+import { ThemeContext } from '../../context/ThemeContext';
 import AdminSidebar from '../../components/AdminSidebar';
 import authService from '../../services/authService';
 import notificationService from '../../services/notificationService';
-import { Settings as SettingsIcon, User, Lock, Save } from 'lucide-react';
+import { Settings as SettingsIcon, User, Lock, Save, Monitor, Sun, Moon, Shield } from 'lucide-react';
 import '../manager/ManagerDashboard.css';
 
 const AdminSettings = () => {
-  const { user, login, logout } = useContext(AuthContext);
+  const { user, logout, setUser } = useContext(AuthContext);
+  const { themePreference, setThemePreference } = useContext(ThemeContext);
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -20,9 +22,17 @@ const AdminSettings = () => {
   });
 
   const [unreadCount, setUnreadCount] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [successMsg, setSuccessMsg] = useState('');
-  const [errorMsg, setErrorMsg] = useState('');
+  
+  // Profile Edit State
+  const [isEditing, setIsEditing] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileSuccessMsg, setProfileSuccessMsg] = useState('');
+  const [profileErrorMsg, setProfileErrorMsg] = useState('');
+
+  // Password Edit State
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordSuccessMsg, setPasswordSuccessMsg] = useState('');
+  const [passwordErrorMsg, setPasswordErrorMsg] = useState('');
 
   useEffect(() => {
     const fetchNotifs = async () => {
@@ -44,9 +54,9 @@ const AdminSettings = () => {
 
   const handleProfileSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    setErrorMsg('');
-    setSuccessMsg('');
+    setProfileLoading(true);
+    setProfileErrorMsg('');
+    setProfileSuccessMsg('');
 
     try {
       const res = await authService.updateProfile({
@@ -55,18 +65,17 @@ const AdminSettings = () => {
       });
 
       if (res.success) {
-        setSuccessMsg('Profile updated successfully');
-        // Update context
+        setProfileSuccessMsg('Profile updated successfully.');
         const updatedUser = { ...user, name: res.data.name, department: res.data.department };
+        setUser(updatedUser);
         localStorage.setItem('user', JSON.stringify(updatedUser));
-        // Soft reload context is handled by just showing the success msg, 
-        // ideally we'd trigger a context refresh, but this works for basic flow.
-        setTimeout(() => window.location.reload(), 1500);
+        setIsEditing(false);
+        setTimeout(() => setProfileSuccessMsg(''), 3000);
       }
     } catch (err) {
-      setErrorMsg(err.response?.data?.message || err.message || 'Failed to update profile');
+      setProfileErrorMsg(err.response?.data?.message || err.message || 'Failed to update profile.');
     } finally {
-      setLoading(false);
+      setProfileLoading(false);
     }
   };
 
@@ -74,13 +83,13 @@ const AdminSettings = () => {
     e.preventDefault();
     
     if (formData.newPassword !== formData.confirmPassword) {
-      setErrorMsg('New passwords do not match');
+      setPasswordErrorMsg('New passwords do not match.');
       return;
     }
 
-    setLoading(true);
-    setErrorMsg('');
-    setSuccessMsg('');
+    setPasswordLoading(true);
+    setPasswordErrorMsg('');
+    setPasswordSuccessMsg('');
 
     try {
       const res = await authService.changePassword({
@@ -89,13 +98,14 @@ const AdminSettings = () => {
       });
 
       if (res.success) {
-        setSuccessMsg('Password updated successfully');
+        setPasswordSuccessMsg('Password updated successfully.');
         setFormData({ ...formData, currentPassword: '', newPassword: '', confirmPassword: '' });
+        setTimeout(() => setPasswordSuccessMsg(''), 3000);
       }
     } catch (err) {
-      setErrorMsg(err.response?.data?.message || err.message || 'Failed to update password');
+      setPasswordErrorMsg(err.response?.data?.message || err.message || 'Failed to update password.');
     } finally {
-      setLoading(false);
+      setPasswordLoading(false);
     }
   };
 
@@ -104,156 +114,282 @@ const AdminSettings = () => {
     navigate('/login');
   };
 
+  if (!user) {
+    return (
+      <div className="dashboard-layout">
+        <AdminSidebar user={user} onLogout={handleLogout} unreadCount={unreadCount} />
+        <main className="dashboard-main">
+          <div className="dash-loading">Loading settings...</div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="dashboard-layout">
       <AdminSidebar user={user} onLogout={handleLogout} unreadCount={unreadCount} />
       
       <main className="dashboard-main">
-        <div className="manager-dashboard-container">
-          <header className="dashboard-header">
+        <div style={{ width: '90%', maxWidth: '1000px', margin: '0 auto' }}>
+          <header className="dashboard-header" style={{ marginBottom: '24px' }}>
             <div>
-              <h1 className="dashboard-title">Account Settings</h1>
-              <p className="dashboard-subtitle">Manage your admin profile and security</p>
+              <h1 className="dashboard-page-title" style={{ marginBottom: '8px' }}>Settings</h1>
+              <p className="dashboard-page-subtitle" style={{ marginBottom: '0' }}>Manage your profile and account settings.</p>
             </div>
           </header>
 
-          {errorMsg && <div className="error-banner">{errorMsg}</div>}
-          {successMsg && <div style={{ background: '#dcfce7', color: '#16a34a', padding: '12px 16px', borderRadius: '8px', marginBottom: '24px', fontWeight: 500 }}>{successMsg}</div>}
-          
           <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }}>
             
-            {/* Profile Section */}
-            <div className="manager-overview-panel">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px', paddingBottom: '16px', borderBottom: '1px solid #e2e8f0' }}>
-                 <User size={18} style={{ color: '#3b82f6' }} />
-                 <h3 className="manager-overview-heading" style={{ margin: 0, border: 'none', padding: 0 }}>Profile Information</h3>
+            {/* ── Profile Information ──────────────────────────────── */}
+            <div className="dash-card">
+              <div className="dash-card-header">
+                <div className="dash-card-icon"><User size={16} /></div>
+                <p className="dash-card-title">Profile Information</p>
               </div>
-              
-              <form onSubmit={handleProfileSubmit}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '24px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#475569', marginBottom: '8px' }}>Full Name</label>
-                    <input 
-                      type="text" 
-                      name="name"
-                      value={formData.name}
-                      onChange={handleChange}
-                      className="dash-input"
-                      style={{ width: '100%', padding: '10px' }}
-                      required
-                    />
-                  </div>
-                  
-                  <div>
-                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#475569', marginBottom: '8px' }}>Email Address (Read-only)</label>
-                    <input 
-                      type="email" 
-                      value={user?.email || ''}
-                      className="dash-input"
-                      style={{ width: '100%', padding: '10px', background: '#f8fafc', color: '#94a3b8', cursor: 'not-allowed' }}
-                      readOnly
-                    />
-                  </div>
 
-                  <div>
-                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#475569', marginBottom: '8px' }}>Department</label>
-                    <input 
-                      type="text" 
-                      name="department"
-                      value={formData.department}
-                      onChange={handleChange}
-                      className="dash-input"
-                      style={{ width: '100%', padding: '10px' }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#475569', marginBottom: '8px' }}>Role (Read-only)</label>
-                    <input 
-                      type="text" 
-                      value={(user?.role || '').toUpperCase()}
-                      className="dash-input"
-                      style={{ width: '100%', padding: '10px', background: '#f8fafc', color: '#94a3b8', cursor: 'not-allowed' }}
-                      readOnly
-                    />
-                  </div>
+              {profileErrorMsg && (
+                <div className="dash-error" style={{ marginBottom: '16px' }}>
+                  {profileErrorMsg}
                 </div>
-
-                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                  <button 
-                    type="submit" 
-                    className="dash-btn"
-                    disabled={loading}
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 24px', background: '#3b82f6', color: 'white' }}
-                  >
-                    <Save size={16} /> Save Profile
-                  </button>
+              )}
+              {profileSuccessMsg && (
+                <div className="dash-info" style={{ marginBottom: '16px' }}>
+                  {profileSuccessMsg}
                 </div>
-              </form>
+              )}
+
+              {!isEditing ? (
+                <>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
+                    <div className="attendance-row" style={{ borderBottom: 'none', padding: '8px 0' }}>
+                      <span className="attendance-label" style={{ display: 'block', fontSize: '13px', marginBottom: '4px' }}>Name</span>
+                      <span className="attendance-value" style={{ fontWeight: '600', fontSize: '15px' }}>{user.name}</span>
+                    </div>
+                    <div className="attendance-row" style={{ borderBottom: 'none', padding: '8px 0' }}>
+                      <span className="attendance-label" style={{ display: 'block', fontSize: '13px', marginBottom: '4px' }}>Email</span>
+                      <span className="attendance-value" style={{ fontSize: '15px' }}>{user.email}</span>
+                    </div>
+                    <div className="attendance-row" style={{ borderBottom: 'none', padding: '8px 0' }}>
+                      <span className="attendance-label" style={{ display: 'block', fontSize: '13px', marginBottom: '4px' }}>Department</span>
+                      <span className="attendance-value" style={{ fontSize: '15px' }}>{user.department || '—'}</span>
+                    </div>
+                    <div className="attendance-row" style={{ borderBottom: 'none', padding: '8px 0' }}>
+                      <span className="attendance-label" style={{ display: 'block', fontSize: '13px', marginBottom: '4px' }}>Role</span>
+                      <span className="attendance-value" style={{ textTransform: 'capitalize', fontSize: '15px' }}>{user.role}</span>
+                    </div>
+                    <div className="attendance-row" style={{ borderBottom: 'none', padding: '8px 0' }}>
+                      <span className="attendance-label" style={{ display: 'block', fontSize: '13px', marginBottom: '4px' }}>Account Status</span>
+                      <span className="attendance-value">
+                        <span className={`status-badge ${user.isActive !== false ? 'active' : 'ended'}`}>
+                          {user.isActive !== false ? 'Active' : 'Inactive'}
+                        </span>
+                      </span>
+                    </div>
+                    <div className="attendance-row" style={{ borderBottom: 'none', padding: '8px 0' }}></div>
+                  </div>
+                  <div className="btn-row" style={{ marginTop: '20px', borderTop: '1px solid var(--border-light)', paddingTop: '20px' }}>
+                    <button className="dash-btn primary" onClick={() => setIsEditing(true)}>Edit Profile</button>
+                  </div>
+                </>
+              ) : (
+                <form onSubmit={handleProfileSubmit}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-muted)', marginBottom: '6px' }}>Name</label>
+                      <input 
+                        type="text" 
+                        name="name"
+                        value={formData.name}
+                        onChange={handleChange}
+                        className="auth-input"
+                        style={{ margin: 0, padding: '10px 12px', width: '100%', boxSizing: 'border-box', background: 'var(--bg-primary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '6px' }}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-muted)', marginBottom: '6px' }}>Email (Read-only)</label>
+                      <input 
+                        type="email" 
+                        value={user?.email || ''}
+                        className="auth-input"
+                        style={{ margin: 0, padding: '10px 12px', width: '100%', boxSizing: 'border-box', background: 'var(--bg-hover)', color: 'var(--text-light)', border: '1px solid var(--border-color)', borderRadius: '6px', cursor: 'not-allowed' }}
+                        readOnly
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-muted)', marginBottom: '6px' }}>Department</label>
+                      <input 
+                        type="text" 
+                        name="department"
+                        value={formData.department}
+                        onChange={handleChange}
+                        className="auth-input"
+                        style={{ margin: 0, padding: '10px 12px', width: '100%', boxSizing: 'border-box', background: 'var(--bg-primary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '6px' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-muted)', marginBottom: '6px' }}>Role (Read-only)</label>
+                      <input 
+                        type="text" 
+                        value={(user?.role || '').charAt(0).toUpperCase() + (user?.role || '').slice(1)}
+                        className="auth-input"
+                        style={{ margin: 0, padding: '10px 12px', width: '100%', boxSizing: 'border-box', background: 'var(--bg-hover)', color: 'var(--text-light)', border: '1px solid var(--border-color)', borderRadius: '6px', cursor: 'not-allowed' }}
+                        readOnly
+                      />
+                    </div>
+                  </div>
+
+                  <div className="btn-row" style={{ marginTop: '20px', borderTop: '1px solid var(--border-light)', paddingTop: '20px' }}>
+                    <button type="submit" className="dash-btn primary" disabled={profileLoading}>
+                      {profileLoading ? 'Saving...' : 'Save Changes'}
+                    </button>
+                    <button type="button" className="dash-btn secondary" onClick={() => {
+                      setIsEditing(false);
+                      setFormData({
+                        ...formData,
+                        name: user.name,
+                        department: user.department
+                      });
+                      setProfileErrorMsg('');
+                    }} disabled={profileLoading}>
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              )}
             </div>
 
-            {/* Password Section */}
-            <div className="manager-overview-panel">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px', paddingBottom: '16px', borderBottom: '1px solid #e2e8f0' }}>
-                 <Lock size={18} style={{ color: '#ef4444' }} />
-                 <h3 className="manager-overview-heading" style={{ margin: 0, border: 'none', padding: 0 }}>Change Password</h3>
+            {/* ── Account ──────────────────────────────────── */}
+            <div className="dash-card">
+              <div className="dash-card-header">
+                <div className="dash-card-icon"><SettingsIcon size={16} /></div>
+                <p className="dash-card-title">Account</p>
               </div>
               
+              <div style={{ marginBottom: '16px' }}>
+                <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+                  Manage your account-related information and preferences.
+                </p>
+                <div className="attendance-row" style={{ borderBottom: 'none', padding: '8px 0' }}>
+                  <div style={{ flex: 1 }}>
+                    <span className="attendance-label" style={{ display: 'block', fontSize: '14px', color: 'var(--text-primary)', fontWeight: '600', marginBottom: '4px' }}>Appearance</span>
+                    <span className="attendance-value" style={{ display: 'block', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '400' }}>Choose your preferred color theme.</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button 
+                      onClick={() => setThemePreference('light')}
+                      style={{ padding: '8px 12px', borderRadius: '8px', border: `1px solid ${themePreference === 'light' ? 'var(--accent-blue)' : 'var(--border-color)'}`, background: themePreference === 'light' ? 'var(--accent-blue-light)' : 'var(--bg-primary)', color: themePreference === 'light' ? 'var(--accent-blue)' : 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '500' }}>
+                      <Sun size={14} /> Light
+                    </button>
+                    <button 
+                      onClick={() => setThemePreference('dark')}
+                      style={{ padding: '8px 12px', borderRadius: '8px', border: `1px solid ${themePreference === 'dark' ? 'var(--accent-blue)' : 'var(--border-color)'}`, background: themePreference === 'dark' ? 'var(--accent-blue-light)' : 'var(--bg-primary)', color: themePreference === 'dark' ? 'var(--accent-blue)' : 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '500' }}>
+                      <Moon size={14} /> Dark
+                    </button>
+                    <button 
+                      onClick={() => setThemePreference('system')}
+                      style={{ padding: '8px 12px', borderRadius: '8px', border: `1px solid ${themePreference === 'system' ? 'var(--accent-blue)' : 'var(--border-color)'}`, background: themePreference === 'system' ? 'var(--accent-blue-light)' : 'var(--bg-primary)', color: themePreference === 'system' ? 'var(--accent-blue)' : 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '500' }}>
+                      <Monitor size={14} /> System
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* ── Change Password ──────────────────────────────────── */}
+            <div className="dash-card">
+              <div className="dash-card-header">
+                <div className="dash-card-icon"><Lock size={16} /></div>
+                <p className="dash-card-title">Change Password</p>
+              </div>
+
+              <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+                Update your password to keep your account secure.
+              </p>
+
+              {passwordErrorMsg && (
+                <div className="dash-error" style={{ marginBottom: '16px' }}>
+                  {passwordErrorMsg}
+                </div>
+              )}
+              {passwordSuccessMsg && (
+                <div className="dash-info" style={{ marginBottom: '16px' }}>
+                  {passwordSuccessMsg}
+                </div>
+              )}
+              
               <form onSubmit={handlePasswordSubmit}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '24px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px' }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#475569', marginBottom: '8px' }}>Current Password</label>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-muted)', marginBottom: '6px' }}>Current Password</label>
                     <input 
                       type="password" 
                       name="currentPassword"
                       value={formData.currentPassword}
                       onChange={handleChange}
-                      className="dash-input"
-                      style={{ width: '100%', padding: '10px' }}
+                      className="auth-input"
+                      style={{ margin: 0, padding: '10px 12px', width: '100%', boxSizing: 'border-box', background: 'var(--bg-primary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '6px' }}
                       required
                     />
                   </div>
-                  
                   <div>
-                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#475569', marginBottom: '8px' }}>New Password</label>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-muted)', marginBottom: '6px' }}>New Password</label>
                     <input 
                       type="password" 
                       name="newPassword"
                       value={formData.newPassword}
                       onChange={handleChange}
-                      className="dash-input"
-                      style={{ width: '100%', padding: '10px' }}
+                      className="auth-input"
+                      style={{ margin: 0, padding: '10px 12px', width: '100%', boxSizing: 'border-box', background: 'var(--bg-primary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '6px' }}
                       required
                       minLength="6"
                     />
                   </div>
-
                   <div>
-                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#475569', marginBottom: '8px' }}>Confirm New Password</label>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-muted)', marginBottom: '6px' }}>Confirm Password</label>
                     <input 
                       type="password" 
                       name="confirmPassword"
                       value={formData.confirmPassword}
                       onChange={handleChange}
-                      className="dash-input"
-                      style={{ width: '100%', padding: '10px' }}
+                      className="auth-input"
+                      style={{ margin: 0, padding: '10px 12px', width: '100%', boxSizing: 'border-box', background: 'var(--bg-primary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '6px' }}
                       required
                       minLength="6"
                     />
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                  <button 
-                    type="submit" 
-                    className="dash-btn"
-                    disabled={loading}
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 24px', background: '#0f172a', color: 'white' }}
-                  >
-                    <Lock size={16} /> Update Password
+                <div className="btn-row" style={{ marginTop: '20px', borderTop: '1px solid var(--border-light)', paddingTop: '20px', justifyContent: 'flex-start' }}>
+                  <button type="submit" className="dash-btn danger" disabled={passwordLoading}>
+                    {passwordLoading ? 'Updating...' : 'Change Password'}
                   </button>
                 </div>
               </form>
+            </div>
+
+            {/* ── Admin Controls ──────────────────────────────────── */}
+            <div className="dash-card">
+              <div className="dash-card-header">
+                <div className="dash-card-icon"><Shield size={16} /></div>
+                <p className="dash-card-title">Admin Controls</p>
+              </div>
+              
+              <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+                User management and organization settings.
+              </p>
+              
+              <div className="attendance-row" style={{ borderBottom: 'none', padding: '8px 0' }}>
+                <div style={{ flex: 1 }}>
+                  <span className="attendance-label" style={{ display: 'block', fontSize: '14px', color: 'var(--text-primary)', fontWeight: '600', marginBottom: '4px' }}>Manage Users</span>
+                  <span className="attendance-value" style={{ display: 'block', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '400' }}>Add, remove, or modify user accounts across the organization.</span>
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <Link to="/admin/employees" className="dash-btn secondary" style={{ textDecoration: 'none' }}>
+                    Go to User Management
+                  </Link>
+                </div>
+              </div>
             </div>
 
           </div>

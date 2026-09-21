@@ -101,7 +101,7 @@ const ManagerEmployees = () => {
                     <th style={{ padding: '12px', fontWeight: 600 }}>Name</th>
                     <th style={{ padding: '12px', fontWeight: 600 }}>Email</th>
                     <th style={{ padding: '12px', fontWeight: 600 }}>Department</th>
-                    <th style={{ padding: '12px', fontWeight: 600 }}>Status</th>
+                    <th style={{ padding: '12px', fontWeight: 600 }}>Account Status</th>
                   </tr>
                 </thead>
                 <tbody>

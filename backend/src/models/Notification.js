@@ -19,12 +19,16 @@ const notificationSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ['attendance', 'work-session', 'activity', 'checkout', 'system'],
+      enum: ['attendance', 'work-session', 'activity', 'checkout', 'system', 'user-management'],
       required: true
     },
     isRead: {
       type: Boolean,
       default: false
+    },
+    readAt: {
+      type: Date,
+      default: null
     }
   },
   {

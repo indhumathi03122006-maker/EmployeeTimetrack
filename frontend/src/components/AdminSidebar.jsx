@@ -12,17 +12,11 @@ import {
   Settings,
   Users
 } from 'lucide-react';
+import SidebarBrand from './SidebarBrand';
 
 export const AdminSidebar = ({ user, onLogout, unreadCount = 0 }) => (
   <aside className="dashboard-sidebar">
-    <div className="sidebar-brand">
-      <Clock size={20} />
-      <span>
-        <span className="brand-employee">Employee</span>
-        <span className="brand-track">Track</span>
-      </span>
-      <span style={{ fontSize: '10px', marginLeft: '4px', background: '#e2e8f0', color: '#475569', padding: '2px 4px', borderRadius: '4px' }}>ADMIN</span>
-    </div>
+    <SidebarBrand role="ADMIN" />
 
     <nav className="sidebar-nav">
       <NavLink to="/admin/dashboard" className={({ isActive }) => isActive ? 'active-link' : ''}>
