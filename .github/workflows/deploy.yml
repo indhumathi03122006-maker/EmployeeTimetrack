@@ -1,0 +1,49 @@
+name: Deploy EmployeeTrack
+
+on:
+  push:
+    branches:
+      - development
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.1
+        with:
+          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
+
+      - name: Add EC2 host to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to EC2
+        run: |
+          ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} << 'EOF'
+            set -e
+
+            cd ~/EmployeeTrack
+
+            git fetch origin development
+            git reset --hard origin/development
+
+            cd backend
+            npm ci
+            pm2 restart employeetrack-backend || pm2 start src/server.js --name employeetrack-backend
+
+            cd ../frontend
+            npm ci
+            npm run build
+
+            sudo rm -rf /var/www/employeetrack
+            sudo mkdir -p /var/www/employeetrack
+            sudo cp -r dist/* /var/www/employeetrack/
+
+            sudo systemctl reload nginx
+          EOF

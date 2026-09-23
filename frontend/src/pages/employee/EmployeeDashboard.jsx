@@ -76,7 +76,7 @@ export const EmployeeSidebar = ({ user, onLogout, unreadCount = 0 }) => (
       </div>
       {user?.role === 'manager' && (
         <NavLink to="/manager/dashboard" className="dash-btn" style={{ marginBottom: '10px', display: 'flex', justifyContent: 'center', width: '100%' }}>
-           Manager View
+          Manager View
         </NavLink>
       )}
       <button className="dash-btn logout-btn" onClick={onLogout}>
@@ -89,12 +89,12 @@ export const EmployeeSidebar = ({ user, onLogout, unreadCount = 0 }) => (
 /* ── Status Badge ─────────────────────────────────────── */
 const StatusBadge = ({ status }) => {
   const map = {
-    active:      { label: 'Active',      cls: 'active' },
-    idle:        { label: 'Idle',        cls: 'idle' },
-    ended:       { label: 'Ended',       cls: 'ended' },
+    active: { label: 'Active', cls: 'active' },
+    idle: { label: 'Idle', cls: 'idle' },
+    ended: { label: 'Ended', cls: 'ended' },
     'not-started': { label: 'Not Started', cls: 'not-started' },
-    present:     { label: 'Present',     cls: 'present' },
-    absent:      { label: 'Absent',      cls: 'not-started' },
+    present: { label: 'Present', cls: 'present' },
+    absent: { label: 'Absent', cls: 'not-started' },
   };
   const { label, cls } = map[status] || { label: status, cls: 'not-started' };
   return (
@@ -111,16 +111,16 @@ const EmployeeDashboard = () => {
   const navigate = useNavigate();
 
   const [attendance, setAttendance] = useState(null);   // today's attendance record or null
-  const [session, setSession]       = useState(null);   // current work session or null
+  const [session, setSession] = useState(null);   // current work session or null
   const [loadingInit, setLoadingInit] = useState(true);
 
   // Per-button loading states
-  const [loadingCheckIn,  setLoadingCheckIn]  = useState(false);
+  const [loadingCheckIn, setLoadingCheckIn] = useState(false);
   const [loadingCheckOut, setLoadingCheckOut] = useState(false);
-  const [loadingStart,    setLoadingStart]    = useState(false);
+  const [loadingStart, setLoadingStart] = useState(false);
   const [loadingActivity, setLoadingActivity] = useState(false);
-  const [loadingEnd,      setLoadingEnd]      = useState(false);
-  
+  const [loadingEnd, setLoadingEnd] = useState(false);
+
   const [agentConnecting, setAgentConnecting] = useState(false);
 
   const [error, setError] = useState('');
@@ -182,6 +182,7 @@ const EmployeeDashboard = () => {
     try {
       const statusRes = await agentService.getStatus();
       if (statusRes && statusRes.connected) {
+        window.location.href = 'employee-track://open';
         await workSessionService.startWorkSession();
         await fetchState();
         setLoadingStart(false);
@@ -192,12 +193,8 @@ const EmployeeDashboard = () => {
         if (pairingRes && pairingRes.success) {
           const code = pairingRes.code;
           console.log('[Frontend] Launching agent with protocol');
-          const iframe = document.createElement('iframe');
-          iframe.style.display = 'none';
-          iframe.src = `employee-track://connect?code=${code}`;
-          document.body.appendChild(iframe);
-          setTimeout(() => document.body.removeChild(iframe), 2000);
-          
+          window.location.href = `employee-track://connect/${code}`;
+
           let timeElapsed = 0;
           console.log('[Frontend] Waiting for agent connection...');
           const pollInterval = setInterval(async () => {
@@ -258,7 +255,7 @@ const EmployeeDashboard = () => {
   };
 
   /* ── Derived state ─────────────────────────────────── */
-  const isCheckedIn  = !!attendance?.checkIn;
+  const isCheckedIn = !!attendance?.checkIn;
   const isCheckedOut = !!attendance?.checkOut;
   const sessionStatus = session?.status || 'not-started';
   const sessionActive = sessionStatus === 'active' || sessionStatus === 'idle';

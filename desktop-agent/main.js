@@ -125,10 +125,10 @@ if (process.platform === 'win32' || process.platform === 'linux') {
   }
 }
 
-if (!gotTheLock && !isProtocolInstance) {
-  logDebug('[Agent] Single instance lock not acquired and no protocol args. Exiting.');
+if (!gotTheLock) {
+  logDebug('[Agent] Single instance lock not acquired. Exiting.');
   app.quit();
-} else if (gotTheLock) {
+} else {
   logDebug('[Agent] Single instance lock acquired.');
   app.on('second-instance', (event, commandLine, workingDirectory) => {
     logDebug(`[Agent] second-instance fired: ${commandLine.join(' | ')}`);
@@ -162,14 +162,29 @@ if (process.defaultApp) {
 async function handleProtocol(url) {
   if (typeof url !== 'string') return;
   url = url.replace(/"/g, '').replace(/'/g, ''); // Strip quotes added by OS
+  
+  if (url.startsWith('employee-track://open')) {
+    logDebug('[Agent] Open requested (already paired)');
+    return; 
+  }
+
   if (!url.startsWith('employee-track://connect')) {
     return;
   }
   
   try {
     const parsedUrl = new URL(url);
-    const code = parsedUrl.searchParams.get('code');
+    let code = parsedUrl.searchParams.get('code');
     
+    if (!code) {
+      code = parsedUrl.pathname.replace(/^\/+/, '').trim();
+    }
+    
+    // Fallback if the whole hostname was used as code, e.g. employee-track://connect/1234
+    // Wait, if it is employee-track://connect/1234
+    // parsedUrl.hostname is 'connect', parsedUrl.pathname is '/1234'
+    // So code would be '1234'
+
     if (code) {
       logDebug('[Agent] Pairing request sent');
       sendToUI('connection-update', 'Pairing...');
@@ -183,6 +198,9 @@ async function handleProtocol(url) {
         logDebug(`[Agent] Pairing failed: ${res.statusCode}`);
         sendToUI('connection-update', `Pairing failed: ${res.data?.message || res.statusCode}`);
       }
+    } else {
+      logDebug('[Agent] No pairing code found in URL');
+      sendToUI('connection-update', 'Pairing code missing');
     }
   } catch (err) {
     logDebug(`[Agent] Protocol handler error: ${err.message}`);
@@ -199,24 +217,7 @@ app.whenReady().then(() => {
     logDebug('[Agent] createWindow called');
   }
 
-  // Handle protocol if opened via CLI on Windows/Linux
-  if (process.platform === 'win32' || process.platform === 'linux') {
-    const url = process.argv.length > 1 ? process.argv[process.argv.length - 1] : null;
-    if (url && url.startsWith('employee-track://')) {
-        logDebug(`[Agent] Protocol received (CLI args): ${url.substring(0, 25)}`);
-        handleProtocol(url).then(() => {
-            if (!gotTheLock) {
-                logDebug('[Agent] Protocol handled by second instance. Quitting now.');
-                app.quit();
-            }
-        });
-    } else if (!gotTheLock) {
-        logDebug('[Agent] No protocol in CLI args for second instance. Quitting now.');
-        app.quit();
-    }
-  } else if (!gotTheLock) {
-    app.quit();
-  }
+
 
   // Only run polling and activity tracking in the primary instance
   if (gotTheLock) {
