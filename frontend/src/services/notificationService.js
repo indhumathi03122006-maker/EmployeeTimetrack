@@ -1,5 +1,5 @@
 import { handleResponse, handleFetchError } from './apiHelper';
-const BASE_URL = 'http://localhost:5000/api/notifications';
+const BASE_URL = '/api/notifications';
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('token');

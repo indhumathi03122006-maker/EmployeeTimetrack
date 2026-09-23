@@ -1,5 +1,5 @@
 import { handleResponse, handleFetchError } from './apiHelper';
-const BASE_URL = 'http://localhost:5000/api/work-session';
+const BASE_URL = '/api/work-session';
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('token');

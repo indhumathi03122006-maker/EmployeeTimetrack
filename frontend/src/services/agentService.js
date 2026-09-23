@@ -1,6 +1,6 @@
 import { handleResponse, handleFetchError } from './apiHelper';
 
-const BASE_URL = 'http://localhost:5000/api/agent';
+const BASE_URL = '/api/agent';
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('token');
