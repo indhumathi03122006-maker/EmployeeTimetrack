@@ -1,9 +1,10 @@
 const fs = require('fs');
 const path = require('path');
+const { app } = require('electron');
 
-const TOKEN_FILE = path.join(__dirname, 'agent-token.enc');
-const FALLBACK_FILE = path.join(__dirname, 'local-token.txt');
-
+const TOKEN_DIR = app.getPath('userData');
+const TOKEN_FILE = path.join(TOKEN_DIR, 'agent-token.enc');
+const FALLBACK_FILE = path.join(TOKEN_DIR, 'local-token.txt');
 let memoryToken = '';
 
 function loadToken() {
@@ -55,7 +56,7 @@ function saveToken(token) {
 }
 
 module.exports = {
-  BACKEND_URL: 'http://localhost:5000',
+  BACKEND_URL: 'http://43.204.149.49',
   get DEVELOPMENT_JWT() {
     return loadToken();
   },
