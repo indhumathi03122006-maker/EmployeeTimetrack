@@ -11,7 +11,9 @@ const {
   addEmployee,
   addManager,
   updateUser,
-  updateUserStatus
+  updateUserStatus,
+  getSettings,
+  updateSettings
 } = require('../controllers/adminController');
 
 // Apply protection and admin authorization to all routes in this file
@@ -30,5 +32,9 @@ router.post('/employees', addEmployee);
 router.post('/managers', addManager);
 router.put('/users/:id', updateUser);
 router.put('/users/:id/status', updateUserStatus);
+
+// Company Settings Routes
+router.get('/settings', getSettings);
+router.put('/settings', updateSettings);
 
 module.exports = router;

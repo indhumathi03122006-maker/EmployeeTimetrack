@@ -161,6 +161,7 @@ const ManagerWorkTime = () => {
                     <th style={{ padding: '12px', fontWeight: 600 }}>End Time</th>
                     <th style={{ padding: '12px', fontWeight: 600 }}>Active</th>
                     <th style={{ padding: '12px', fontWeight: 600 }}>Idle</th>
+                    <th style={{ padding: '12px', fontWeight: 600 }}>Break</th>
                     <th style={{ padding: '12px', fontWeight: 600 }}>Status</th>
                   </tr>
                 </thead>
@@ -176,6 +177,7 @@ const ManagerWorkTime = () => {
                       <td style={{ padding: '12px', color: '#475569' }}>{formatTime(session.endTime)}</td>
                       <td style={{ padding: '12px', color: '#475569', fontWeight: 500 }}>{formatDuration(session.activeDuration)}</td>
                       <td style={{ padding: '12px', color: '#475569' }}>{formatDuration(session.idleDuration)}</td>
+                      <td style={{ padding: '12px', color: '#475569' }}>{formatDuration(session.attendance?.breakDuration || 0)}</td>
                       <td style={{ padding: '12px' }}>
                         <StatusBadge status={session.status} />
                       </td>

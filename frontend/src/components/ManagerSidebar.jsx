@@ -10,7 +10,8 @@ import {
   FileText,
   Bell,
   Settings,
-  Users
+  Users,
+  Monitor,
 } from 'lucide-react';
 import SidebarBrand from './SidebarBrand';
 
@@ -33,6 +34,9 @@ export const ManagerSidebar = ({ user, onLogout, unreadCount = 0 }) => (
       </NavLink>
       <NavLink to="/manager/current-activity" className={({ isActive }) => isActive ? 'active-link' : ''}>
         <Activity size={16} /> Current Activity
+      </NavLink>
+      <NavLink to="/manager/application-activity" className={({ isActive }) => isActive ? 'active-link' : ''}>
+        <Monitor size={16} /> Application Activity
       </NavLink>
       <NavLink to="/manager/reports" className={({ isActive }) => isActive ? 'active-link' : ''}>
         <FileText size={16} /> Reports

@@ -166,17 +166,6 @@ const WorkTime = () => {
             {/* Controls */}
             {sessionActive && (
               <div className="btn-row">
-                {sessionStatus === 'active' && (
-                  <button
-                    className="dash-btn warning"
-                    onClick={() => handleActivity('idle')}
-                    disabled={loadingActivity}
-                    id="wt-btn-mark-idle"
-                  >
-                    <Pause size={14} />
-                    {loadingActivity ? 'Updating…' : 'Mark Idle'}
-                  </button>
-                )}
                 {sessionStatus === 'idle' && (
                   <button
                     className="dash-btn success"

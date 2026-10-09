@@ -28,6 +28,34 @@ const attendanceSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    isOnBreak: {
+      type: Boolean,
+      default: false,
+    },
+    breakStart: {
+      type: Date,
+      default: null,
+    },
+    breakEnd: {
+      type: Date,
+      default: null,
+    },
+    breakDuration: {
+      type: Number,
+      default: 0,
+    },
+    isLate: {
+      type: Boolean,
+      default: false,
+    },
+    isEarlyCheckout: {
+      type: Boolean,
+      default: false,
+    },
+    isWorkingDay: {
+      type: Boolean,
+      default: true,
+    },
   },
   {
     timestamps: true,

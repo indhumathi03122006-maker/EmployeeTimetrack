@@ -1,5 +1,6 @@
 const Attendance = require('../models/Attendance');
 const WorkSession = require('../models/WorkSession');
+const Settings = require('../models/Settings');
 const createNotification = require('../utils/createNotification');
 
 // Helper to get consistent today's date (server time, midnight)
@@ -29,12 +30,37 @@ const checkIn = async (req, res) => {
     }
 
     const now = new Date();
+    
+    // Company Working Hours Logic
+    let isWorkingDay = true;
+    let isLate = false;
+    
+    const settings = await Settings.findOne();
+    if (settings) {
+      const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const todayName = dayNames[now.getDay()];
+      
+      isWorkingDay = (settings.workingDays || []).includes(todayName);
+      
+      if (isWorkingDay && settings.workStartTime) {
+        const [hours, minutes] = settings.workStartTime.split(':').map(Number);
+        const expectedStartTime = new Date(todayDate);
+        expectedStartTime.setHours(hours, minutes, 0, 0);
+        
+        if (now > expectedStartTime) {
+          isLate = true;
+        }
+      }
+    }
+
     const newAttendance = await Attendance.create({
       user: userId,
       date: todayDate,
       checkIn: now,
       status: 'present',
-      workDuration: 0
+      workDuration: 0,
+      isWorkingDay,
+      isLate
     });
 
     // Fire notification (non-blocking — error is handled inside helper)
@@ -98,6 +124,18 @@ const checkOut = async (req, res) => {
     const durationMinutes = Math.floor(durationMs / (1000 * 60));
     
     attendance.workDuration = durationMinutes;
+
+    // Company Working Hours Logic
+    const settings = await Settings.findOne();
+    if (settings && settings.workEndTime) {
+      const [hours, minutes] = settings.workEndTime.split(':').map(Number);
+      const expectedEndTime = new Date(todayDate);
+      expectedEndTime.setHours(hours, minutes, 0, 0);
+      
+      if (now < expectedEndTime) {
+        attendance.isEarlyCheckout = true;
+      }
+    }
 
     await attendance.save();
 
@@ -280,10 +318,104 @@ const getReport = async (req, res) => {
   }
 };
 
+// POST /api/attendance/break/start
+const startBreak = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const todayDate = getTodayDate();
+
+    const attendance = await Attendance.findOne({
+      user: userId,
+      date: todayDate
+    });
+
+    if (!attendance) {
+      return res.status(404).json({ success: false, message: 'No attendance record for today' });
+    }
+
+    if (attendance.checkOut) {
+      return res.status(400).json({ success: false, message: 'Already checked out' });
+    }
+
+    const workSession = await WorkSession.findOne({
+      attendance: attendance._id,
+      status: { $in: ['active', 'idle'] }
+    });
+
+    if (!workSession) {
+      return res.status(400).json({ success: false, message: 'No active work session' });
+    }
+
+    if (attendance.isOnBreak) {
+      return res.status(400).json({ success: false, message: 'Already on break' });
+    }
+
+    attendance.isOnBreak = true;
+    attendance.breakStart = new Date();
+    attendance.breakEnd = null;
+
+    await attendance.save();
+
+    res.json({
+      success: true,
+      message: 'Break started successfully',
+      attendance
+    });
+  } catch (error) {
+    console.error('[DEBUG] Error during startBreak:', error);
+    res.status(500).json({ success: false, message: 'Server error during start break' });
+  }
+};
+
+// POST /api/attendance/break/end
+const endBreak = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const todayDate = getTodayDate();
+
+    const attendance = await Attendance.findOne({
+      user: userId,
+      date: todayDate
+    });
+
+    if (!attendance) {
+      return res.status(404).json({ success: false, message: 'No attendance record for today' });
+    }
+
+    if (!attendance.isOnBreak) {
+      return res.status(400).json({ success: false, message: 'Not currently on break' });
+    }
+
+    const now = new Date();
+    attendance.breakEnd = now;
+
+    if (attendance.breakStart) {
+      const durationMs = now - attendance.breakStart;
+      const durationMinutes = Math.floor(durationMs / (1000 * 60));
+      attendance.breakDuration = (attendance.breakDuration || 0) + durationMinutes;
+    }
+
+    attendance.isOnBreak = false;
+
+    await attendance.save();
+
+    res.json({
+      success: true,
+      message: 'Break ended successfully',
+      attendance
+    });
+  } catch (error) {
+    console.error('[DEBUG] Error during endBreak:', error);
+    res.status(500).json({ success: false, message: 'Server error during end break' });
+  }
+};
+
 module.exports = {
   checkIn,
   checkOut,
   getTodayAttendance,
   getAttendanceHistory,
-  getReport
+  getReport,
+  startBreak,
+  endBreak
 };

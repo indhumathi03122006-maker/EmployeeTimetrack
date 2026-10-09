@@ -132,9 +132,13 @@ const getTeamWorkSessions = async (req, res) => {
     let query = { user: { $in: teamMemberIds } };
 
     if (startDate && endDate) {
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
       query.startTime = {
-        $gte: new Date(startDate),
-        $lte: new Date(endDate)
+        $gte: start,
+        $lte: end
       };
     } else if (startDate) {
       query.startTime = { $gte: new Date(startDate) };
@@ -142,6 +146,7 @@ const getTeamWorkSessions = async (req, res) => {
 
     const workSessions = await WorkSession.find(query)
       .populate('user', 'name email department')
+      .populate('attendance', 'breakDuration')
       .sort({ startTime: -1 });
 
     const filledSessions = fillAbsentRecords(teamMembers, workSessions, 'workSession', startDate, endDate);
@@ -167,14 +172,28 @@ const getTeamCurrentActivity = async (req, res) => {
     const teamMemberIds = teamMembers.map((member) => member._id);
 
     // Find the most recent active or idle session for each team member
-    const currentSessions = await WorkSession.find({
+    const currentSessionsRaw = await WorkSession.find({
       user: { $in: teamMemberIds },
       status: { $in: ['active', 'idle'] }
-    }).populate('user', 'name email department');
+    })
+      .populate('user', 'name email department')
+      .populate('attendance', 'isOnBreak');
+
+    const now = Date.now();
+    const processedSessions = currentSessionsRaw.map(session => {
+      const sessionObj = session.toObject();
+      if (sessionObj.lastActivityAt) {
+        const diffMs = now - new Date(sessionObj.lastActivityAt).getTime();
+        if (diffMs > 5 * 60 * 1000) {
+          sessionObj.status = 'idle';
+        }
+      }
+      return sessionObj;
+    });
 
     res.status(200).json({
       success: true,
-      data: currentSessions,
+      data: processedSessions,
     });
   } catch (error) {
     console.error('Error in getTeamCurrentActivity:', error);
@@ -206,9 +225,13 @@ const getTeamReports = async (req, res) => {
     let query = { user: { $in: targetUserIds } };
 
     if (startDate && endDate) {
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
       query.date = {
-        $gte: new Date(startDate),
-        $lte: new Date(endDate)
+        $gte: start,
+        $lte: end
       };
     } else if (startDate) {
       query.date = { $gte: new Date(startDate) };
@@ -219,9 +242,13 @@ const getTeamReports = async (req, res) => {
     // Get corresponding work sessions
     const workSessionQuery = { user: { $in: targetUserIds } };
     if (startDate && endDate) {
+       const start = new Date(startDate);
+       start.setHours(0, 0, 0, 0);
+       const end = new Date(endDate);
+       end.setHours(23, 59, 59, 999);
        workSessionQuery.startTime = {
-        $gte: new Date(startDate),
-        $lte: new Date(endDate)
+        $gte: start,
+        $lte: end
       };
     } else if (startDate) {
        workSessionQuery.startTime = { $gte: new Date(startDate) };

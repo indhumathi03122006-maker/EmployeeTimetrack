@@ -10,7 +10,8 @@ import {
   FileText,
   Bell,
   Settings,
-  Users
+  Users,
+  Monitor,
 } from 'lucide-react';
 import SidebarBrand from './SidebarBrand';
 
@@ -34,6 +35,9 @@ export const AdminSidebar = ({ user, onLogout, unreadCount = 0 }) => (
       <NavLink to="/admin/current-activity" className={({ isActive }) => isActive ? 'active-link' : ''}>
         <Activity size={16} /> Current Activity
       </NavLink>
+      <NavLink to="/admin/application-activity" className={({ isActive }) => isActive ? 'active-link' : ''}>
+        <Monitor size={16} /> Application Activity
+      </NavLink>
       <NavLink to="/admin/reports" className={({ isActive }) => isActive ? 'active-link' : ''}>
         <FileText size={16} /> Reports
       </NavLink>
@@ -42,6 +46,9 @@ export const AdminSidebar = ({ user, onLogout, unreadCount = 0 }) => (
         {unreadCount > 0 && (
           <span className="notif-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
         )}
+      </NavLink>
+      <NavLink to="/admin/shift" className={({ isActive }) => isActive ? 'active-link' : ''}>
+        <Clock size={16} /> Shift
       </NavLink>
       <NavLink to="/admin/settings" className={({ isActive }) => isActive ? 'active-link' : ''}>
         <Settings size={16} /> Settings

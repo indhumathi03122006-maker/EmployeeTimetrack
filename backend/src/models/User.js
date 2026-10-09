@@ -30,6 +30,11 @@ const userSchema = new mongoose.Schema(
       ref: 'User',
       default: null,
     },
+    shift: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Shift',
+      default: null,
+    },
     isActive: {
       type: Boolean,
       default: true,

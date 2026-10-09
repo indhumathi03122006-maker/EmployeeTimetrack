@@ -11,7 +11,8 @@ const fillAbsentRecords = (targetUsers, records, type, startDate, endDate) => {
   records.forEach(record => {
     const recordDate = record.date || record.startTime;
     if (recordDate) {
-      const dateStr = new Date(recordDate).toISOString().split('T')[0];
+      const dObj = new Date(recordDate);
+      const dateStr = `${dObj.getFullYear()}-${String(dObj.getMonth() + 1).padStart(2, '0')}-${String(dObj.getDate()).padStart(2, '0')}`;
       const userId = record.user._id ? record.user._id.toString() : record.user.toString();
       const key = `${dateStr}_${userId}`;
       if (!recordMap[key]) {
@@ -25,7 +26,7 @@ const fillAbsentRecords = (targetUsers, records, type, startDate, endDate) => {
   
   // Iterate through each date in the range
   for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-    const dateStr = d.toISOString().split('T')[0];
+    const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     
     // For each user, check if they have a record on this date
     targetUsers.forEach(user => {

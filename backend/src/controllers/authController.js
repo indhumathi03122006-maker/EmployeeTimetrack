@@ -69,7 +69,7 @@ const login = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Please provide email and password' });
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email }).populate('shift');
 
     if (user && (await user.matchPassword(password))) {
       if (!user.isActive) {
@@ -84,6 +84,7 @@ const login = async (req, res) => {
           email: user.email,
           role: user.role,
           department: user.department,
+          shift: user.shift,
           token: generateToken(user._id),
         },
       });
@@ -97,7 +98,7 @@ const login = async (req, res) => {
 
 const getCurrentUser = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).select('-password');
+    const user = await User.findById(req.user._id).select('-password').populate('shift');
     if (user) {
       res.json({ success: true, data: user });
     } else {

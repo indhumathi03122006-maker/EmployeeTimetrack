@@ -5,7 +5,7 @@ import { ThemeContext } from '../../context/ThemeContext';
 import AdminSidebar from '../../components/AdminSidebar';
 import authService from '../../services/authService';
 import notificationService from '../../services/notificationService';
-import { Settings as SettingsIcon, User, Lock, Save, Monitor, Sun, Moon, Shield } from 'lucide-react';
+import { Settings as SettingsIcon, User, Lock, Save, Monitor, Sun, Moon, Shield, Clock } from 'lucide-react';
 import '../manager/ManagerDashboard.css';
 
 const AdminSettings = () => {
@@ -22,6 +22,20 @@ const AdminSettings = () => {
   });
 
   const [unreadCount, setUnreadCount] = useState(0);
+  
+  // Company Settings State
+  const [settingsLoading, setSettingsLoading] = useState(true);
+  const [settingsSaving, setSettingsSaving] = useState(false);
+  const [settingsSuccessMsg, setSettingsSuccessMsg] = useState('');
+  const [settingsErrorMsg, setSettingsErrorMsg] = useState('');
+  const [companySettings, setCompanySettings] = useState({
+    workStartTime: '09:00',
+    workEndTime: '17:00',
+    workingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+    enableBreakSchedule: false,
+    breakSchedule: []
+  });
+  const allDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   
   // Profile Edit State
   const [isEditing, setIsEditing] = useState(false);
@@ -45,7 +59,24 @@ const AdminSettings = () => {
         console.error('Failed to load notifications', err);
       }
     };
+    const fetchSettings = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch('/api/admin/settings', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success) {
+          setCompanySettings(data.data);
+        }
+      } catch (err) {
+        setSettingsErrorMsg('Failed to load company settings.');
+      } finally {
+        setSettingsLoading(false);
+      }
+    };
     fetchNotifs();
+    fetchSettings();
   }, []);
 
   const handleChange = (e) => {
@@ -106,6 +137,68 @@ const AdminSettings = () => {
       setPasswordErrorMsg(err.response?.data?.message || err.message || 'Failed to update password.');
     } finally {
       setPasswordLoading(false);
+    }
+  };
+
+  const handleSettingsChange = (e) => {
+    setCompanySettings({ ...companySettings, [e.target.name]: e.target.value });
+  };
+
+  const handleDayToggle = (day) => {
+    const current = companySettings.workingDays || [];
+    const updated = current.includes(day)
+      ? current.filter(d => d !== day)
+      : [...current, day];
+    
+    // Sort days chronologically for neatness
+    const sorted = updated.sort((a, b) => allDays.indexOf(a) - allDays.indexOf(b));
+    setCompanySettings({ ...companySettings, workingDays: sorted });
+  };
+
+  const handleSettingsSubmit = async (e) => {
+    e.preventDefault();
+    setSettingsSaving(true);
+    setSettingsErrorMsg('');
+    setSettingsSuccessMsg('');
+
+    if (companySettings.enableBreakSchedule && companySettings.breakSchedule?.length > 0) {
+      const breaks = [...companySettings.breakSchedule].sort((a, b) => a.startTime.localeCompare(b.startTime));
+      for (let i = 0; i < breaks.length; i++) {
+        if (breaks[i].startTime >= breaks[i].endTime) {
+          setSettingsErrorMsg('Break start time must be before end time.');
+          setSettingsSaving(false);
+          return;
+        }
+        if (i > 0 && breaks[i].startTime < breaks[i - 1].endTime) {
+          setSettingsErrorMsg('Break slots cannot overlap.');
+          setSettingsSaving(false);
+          return;
+        }
+      }
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('/api/admin/settings', {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}` 
+        },
+        body: JSON.stringify(companySettings)
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSettingsSuccessMsg('Company settings updated successfully.');
+        setCompanySettings(data.data);
+        setTimeout(() => setSettingsSuccessMsg(''), 3000);
+      } else {
+        setSettingsErrorMsg(data.message || 'Failed to update company settings.');
+      }
+    } catch (err) {
+      setSettingsErrorMsg(err.message || 'Failed to update company settings.');
+    } finally {
+      setSettingsSaving(false);
     }
   };
 
@@ -366,6 +459,174 @@ const AdminSettings = () => {
                   </button>
                 </div>
               </form>
+            </div>
+
+            {/* ── Company Working Hours ──────────────────────────────────── */}
+            <div className="dash-card">
+              <div className="dash-card-header">
+                <div className="dash-card-icon"><Clock size={16} /></div>
+                <p className="dash-card-title">Company Working Hours</p>
+              </div>
+
+              <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+                Set the default global working hours and days for the organization.
+              </p>
+
+              {settingsErrorMsg && (
+                <div className="dash-error" style={{ marginBottom: '16px' }}>
+                  {settingsErrorMsg}
+                </div>
+              )}
+              {settingsSuccessMsg && (
+                <div className="dash-info" style={{ marginBottom: '16px' }}>
+                  {settingsSuccessMsg}
+                </div>
+              )}
+
+              {settingsLoading ? (
+                <div className="dash-loading" style={{ minHeight: '100px' }}>Loading settings...</div>
+              ) : (
+                <form onSubmit={handleSettingsSubmit}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '20px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-muted)', marginBottom: '6px' }}>Work Start Time</label>
+                      <input 
+                        type="time" 
+                        name="workStartTime"
+                        value={companySettings.workStartTime}
+                        onChange={handleSettingsChange}
+                        className="auth-input"
+                        style={{ margin: 0, padding: '10px 12px', width: '100%', boxSizing: 'border-box', background: 'var(--bg-primary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '6px' }}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-muted)', marginBottom: '6px' }}>Work End Time</label>
+                      <input 
+                        type="time" 
+                        name="workEndTime"
+                        value={companySettings.workEndTime}
+                        onChange={handleSettingsChange}
+                        className="auth-input"
+                        style={{ margin: 0, padding: '10px 12px', width: '100%', boxSizing: 'border-box', background: 'var(--bg-primary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '6px' }}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ marginBottom: '20px' }}>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-muted)', marginBottom: '8px' }}>Working Days</label>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                      {allDays.map(day => {
+                        const isSelected = (companySettings.workingDays || []).includes(day);
+                        return (
+                          <button
+                            key={day}
+                            type="button"
+                            onClick={() => handleDayToggle(day)}
+                            style={{
+                              padding: '8px 14px',
+                              borderRadius: '20px',
+                              border: `1px solid ${isSelected ? 'var(--accent-blue)' : 'var(--border-color)'}`,
+                              background: isSelected ? 'var(--accent-blue-light)' : 'var(--bg-primary)',
+                              color: isSelected ? 'var(--accent-blue)' : 'var(--text-secondary)',
+                              cursor: 'pointer',
+                              fontSize: '13px',
+                              fontWeight: '500',
+                              transition: 'all 0.2s'
+                            }}
+                          >
+                            {day}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div style={{ marginTop: '24px', borderTop: '1px solid var(--border-light)', paddingTop: '20px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                      <div>
+                        <h4 style={{ margin: '0 0 4px', fontSize: '14px', color: 'var(--text-primary)' }}>Break Schedule</h4>
+                        <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)' }}>Configure designated break time slots for the company.</p>
+                      </div>
+                      <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', gap: '8px' }}>
+                        <input 
+                          type="checkbox" 
+                          checked={companySettings.enableBreakSchedule || false}
+                          onChange={(e) => setCompanySettings({ ...companySettings, enableBreakSchedule: e.target.checked })}
+                          style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                        />
+                        <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-secondary)' }}>Enable</span>
+                      </label>
+                    </div>
+
+                    {companySettings.enableBreakSchedule && (
+                      <div style={{ background: 'var(--bg-hover)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                        {(companySettings.breakSchedule || []).map((slot, index) => (
+                          <div key={index} style={{ display: 'flex', alignItems: 'flex-end', gap: '16px', marginBottom: '16px' }}>
+                            <div style={{ flex: 1 }}>
+                              <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', color: 'var(--text-muted)', marginBottom: '6px' }}>Break {index + 1} Start</label>
+                              <input 
+                                type="time" 
+                                value={slot.startTime}
+                                onChange={(e) => {
+                                  const updated = [...companySettings.breakSchedule];
+                                  updated[index].startTime = e.target.value;
+                                  setCompanySettings({ ...companySettings, breakSchedule: updated });
+                                }}
+                                className="auth-input"
+                                style={{ margin: 0, padding: '8px 12px', width: '100%', boxSizing: 'border-box', background: 'var(--bg-primary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '6px' }}
+                                required
+                              />
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', color: 'var(--text-muted)', marginBottom: '6px' }}>End Time</label>
+                              <input 
+                                type="time" 
+                                value={slot.endTime}
+                                onChange={(e) => {
+                                  const updated = [...companySettings.breakSchedule];
+                                  updated[index].endTime = e.target.value;
+                                  setCompanySettings({ ...companySettings, breakSchedule: updated });
+                                }}
+                                className="auth-input"
+                                style={{ margin: 0, padding: '8px 12px', width: '100%', boxSizing: 'border-box', background: 'var(--bg-primary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '6px' }}
+                                required
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updated = companySettings.breakSchedule.filter((_, i) => i !== index);
+                                setCompanySettings({ ...companySettings, breakSchedule: updated });
+                              }}
+                              className="dash-btn danger"
+                              style={{ padding: '8px 12px', marginBottom: '1px' }}
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ))}
+                        
+                        <button
+                          type="button"
+                          onClick={() => setCompanySettings({ ...companySettings, breakSchedule: [...(companySettings.breakSchedule || []), { startTime: '12:00', endTime: '13:00' }] })}
+                          className="dash-btn secondary"
+                          style={{ fontSize: '13px', padding: '6px 12px' }}
+                        >
+                          + Add Break
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="btn-row" style={{ marginTop: '20px', borderTop: '1px solid var(--border-light)', paddingTop: '20px', justifyContent: 'flex-start' }}>
+                    <button type="submit" className="dash-btn primary" disabled={settingsSaving}>
+                      {settingsSaving ? 'Saving...' : 'Save Working Hours'}
+                    </button>
+                  </div>
+                </form>
+              )}
             </div>
 
             {/* ── Admin Controls ──────────────────────────────────── */}

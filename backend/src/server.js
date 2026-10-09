@@ -9,6 +9,8 @@ const notificationRoutes = require('./routes/notificationRoutes');
 const managerRoutes = require('./routes/managerRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const agentRoutes = require('./routes/agentRoutes');
+const shiftRoutes = require('./routes/shiftRoutes');
+const appActivityRoutes = require('./routes/appActivityRoutes');
 
 const app = express();
 
@@ -29,6 +31,8 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/manager', managerRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/agent', agentRoutes);
+app.use('/api/shift', shiftRoutes);
+app.use('/api/app-activity', appActivityRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({

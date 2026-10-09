@@ -158,7 +158,9 @@ const ManagerAttendance = () => {
                     <th style={{ padding: '12px', fontWeight: 600 }}>Employee</th>
                     <th style={{ padding: '12px', fontWeight: 600 }}>Date</th>
                     <th style={{ padding: '12px', fontWeight: 600 }}>Check In</th>
+                    <th style={{ padding: '12px', fontWeight: 600 }}>Arrival</th>
                     <th style={{ padding: '12px', fontWeight: 600 }}>Check Out</th>
+                    <th style={{ padding: '12px', fontWeight: 600 }}>Departure</th>
                     <th style={{ padding: '12px', fontWeight: 600 }}>Duration</th>
                     <th style={{ padding: '12px', fontWeight: 600 }}>Status</th>
                   </tr>
@@ -172,7 +174,27 @@ const ManagerAttendance = () => {
                       </td>
                       <td style={{ padding: '12px', color: '#475569' }}>{formatDate(record.date)}</td>
                       <td style={{ padding: '12px', color: '#475569' }}>{formatTime(record.checkIn)}</td>
+                      <td style={{ padding: '12px', fontSize: '13px' }}>
+                        {record.status === 'absent' ? (
+                          <span style={{ color: '#64748b' }}>—</span>
+                        ) : record.isLate ? (
+                          <span style={{ color: '#f59e0b', fontWeight: 500 }}>Late Arrival</span>
+                        ) : (
+                          <span style={{ color: '#22c55e', fontWeight: 500 }}>On Time</span>
+                        )}
+                      </td>
                       <td style={{ padding: '12px', color: '#475569' }}>{formatTime(record.checkOut)}</td>
+                      <td style={{ padding: '12px', fontSize: '13px' }}>
+                        {record.status === 'absent' ? (
+                          <span style={{ color: '#64748b' }}>—</span>
+                        ) : !record.checkOut ? (
+                          <span style={{ color: '#64748b', fontWeight: 500 }}>Not Checked Out</span>
+                        ) : record.isEarlyCheckout ? (
+                          <span style={{ color: '#ef4444', fontWeight: 500 }}>Early Checkout</span>
+                        ) : (
+                          <span style={{ color: '#22c55e', fontWeight: 500 }}>On Time</span>
+                        )}
+                      </td>
                       <td style={{ padding: '12px', color: '#475569', fontWeight: 500 }}>{formatMinutes(record.workDuration)}</td>
                       <td style={{ padding: '12px' }}>
                         <StatusBadge status={record.status} />

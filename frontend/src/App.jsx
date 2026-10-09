@@ -5,6 +5,7 @@ import EmployeeDashboard from './pages/employee/EmployeeDashboard';
 import Attendance from './pages/employee/Attendance';
 import WorkTime from './pages/employee/WorkTime';
 import CurrentActivity from './pages/employee/CurrentActivity';
+import ApplicationActivity from './pages/employee/ApplicationActivity';
 import Reports from './pages/employee/Reports';
 import Notifications from './pages/employee/Notifications';
 import Settings from './pages/employee/Settings';
@@ -13,6 +14,7 @@ import ManagerEmployees from './pages/manager/ManagerEmployees';
 import ManagerAttendance from './pages/manager/ManagerAttendance';
 import ManagerWorkTime from './pages/manager/ManagerWorkTime';
 import ManagerCurrentActivity from './pages/manager/ManagerCurrentActivity';
+import ManagerApplicationActivity from './pages/manager/ManagerApplicationActivity';
 import ManagerReports from './pages/manager/ManagerReports';
 import ManagerNotifications from './pages/manager/ManagerNotifications';
 import ManagerSettings from './pages/manager/ManagerSettings';
@@ -21,8 +23,10 @@ import AdminEmployees from './pages/admin/AdminEmployees';
 import AdminAttendance from './pages/admin/AdminAttendance';
 import AdminWorkTime from './pages/admin/AdminWorkTime';
 import AdminCurrentActivity from './pages/admin/AdminCurrentActivity';
+import AdminApplicationActivity from './pages/admin/AdminApplicationActivity';
 import AdminReports from './pages/admin/AdminReports';
 import AdminNotifications from './pages/admin/AdminNotifications';
+import AdminShift from './pages/admin/AdminShift';
 import AdminSettings from './pages/admin/AdminSettings';
 import { AuthContext } from './context/AuthContext';
 
@@ -85,6 +89,15 @@ function App() {
         element={
           <ProtectedRoute allowedRoles={['employee', 'manager']}>
             <CurrentActivity />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/employee/application-activity"
+        element={
+          <ProtectedRoute allowedRoles={['employee', 'manager']}>
+            <ApplicationActivity />
           </ProtectedRoute>
         }
       />
@@ -162,6 +175,15 @@ function App() {
       />
 
       <Route 
+        path="/manager/application-activity" 
+        element={
+          <ProtectedRoute allowedRoles={['manager']}>
+            <ManagerApplicationActivity />
+          </ProtectedRoute>
+        } 
+      />
+
+      <Route 
         path="/manager/reports" 
         element={
           <ProtectedRoute allowedRoles={['manager']}>
@@ -234,6 +256,15 @@ function App() {
       />
 
       <Route 
+        path="/admin/application-activity" 
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AdminApplicationActivity />
+          </ProtectedRoute>
+        } 
+      />
+
+      <Route 
         path="/admin/reports" 
         element={
           <ProtectedRoute allowedRoles={['admin']}>
@@ -247,6 +278,15 @@ function App() {
         element={
           <ProtectedRoute allowedRoles={['admin']}>
             <AdminNotifications />
+          </ProtectedRoute>
+        } 
+      />
+
+      <Route 
+        path="/admin/shift" 
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AdminShift />
           </ProtectedRoute>
         } 
       />

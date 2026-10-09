@@ -19,6 +19,7 @@ import {
   FileText,
   Bell,
   Settings,
+  Monitor,
 } from 'lucide-react';
 import SidebarBrand from '../../components/SidebarBrand';
 import './EmployeeDashboard.css';
@@ -54,6 +55,9 @@ export const EmployeeSidebar = ({ user, onLogout, unreadCount = 0 }) => (
       </NavLink>
       <NavLink to="/employee/current-activity" className={({ isActive }) => isActive ? 'active-link' : ''}>
         <Activity size={16} /> Current Activity
+      </NavLink>
+      <NavLink to="/employee/application-activity" className={({ isActive }) => isActive ? 'active-link' : ''}>
+        <Monitor size={16} /> Application Activity
       </NavLink>
       <NavLink to="/employee/reports" className={({ isActive }) => isActive ? 'active-link' : ''}>
         <FileText size={16} /> Reports
@@ -120,6 +124,7 @@ const EmployeeDashboard = () => {
   const [loadingStart, setLoadingStart] = useState(false);
   const [loadingActivity, setLoadingActivity] = useState(false);
   const [loadingEnd, setLoadingEnd] = useState(false);
+  const [loadingBreak, setLoadingBreak] = useState(false);
 
   const [agentConnecting, setAgentConnecting] = useState(false);
 
@@ -180,51 +185,31 @@ const EmployeeDashboard = () => {
     setError('');
     setLoadingStart(true);
     try {
-      const statusRes = await agentService.getStatus();
-      if (statusRes && statusRes.connected) {
-        window.location.href = 'employee-track://open';
-        await workSessionService.startWorkSession();
-        await fetchState();
-        setLoadingStart(false);
-      } else {
-        setAgentConnecting(true);
-        console.log('[Frontend] Requesting pairing code');
-        const pairingRes = await agentService.requestPairingCode();
-        if (pairingRes && pairingRes.success) {
-          const code = pairingRes.code;
-          console.log('[Frontend] Launching agent with protocol');
-          window.location.href = `employee-track://connect/${code}`;
+      // 1. Start the work session directly first
+      await workSessionService.startWorkSession();
+      await fetchState();
 
-          let timeElapsed = 0;
-          console.log('[Frontend] Waiting for agent connection...');
-          const pollInterval = setInterval(async () => {
-            timeElapsed += 3000;
-            const pollRes = await agentService.getStatus();
-            if (pollRes && pollRes.connected) {
-              console.log('[Frontend] Agent detected');
-              clearInterval(pollInterval);
-              setAgentConnecting(false);
-              await workSessionService.startWorkSession();
-              await fetchState();
-              setLoadingStart(false);
-            } else if (timeElapsed >= 120000) {
-              console.log('[Frontend] Waiting for agent timed out');
-              clearInterval(pollInterval);
-              setAgentConnecting(false);
-              setLoadingStart(false);
-              setError('Desktop Agent connection timed out. Please ensure it is installed and running.');
-            }
-          }, 3000);
+      // 2. Try to connect to the agent in the background (non-blocking)
+      try {
+        const statusRes = await agentService.getStatus();
+        if (statusRes && statusRes.connected) {
+          window.location.href = 'employee-track://open';
         } else {
-          setError('Failed to generate pairing code');
-          setAgentConnecting(false);
-          setLoadingStart(false);
+          const pairingRes = await agentService.requestPairingCode();
+          if (pairingRes && pairingRes.success) {
+            const code = pairingRes.code;
+            console.log('[Frontend] Launching agent with protocol');
+            window.location.href = `employee-track://connect/${code}`;
+          }
         }
+      } catch (agentErr) {
+        console.log('[Frontend] Desktop Agent not reachable, continuing without it:', agentErr);
       }
     } catch (err) {
-      setError(err.message || 'Error connecting to agent');
-      setAgentConnecting(false);
+      setError(err.message || 'Error starting work session');
+    } finally {
       setLoadingStart(false);
+      setAgentConnecting(false);
     }
   };
 
@@ -254,11 +239,41 @@ const EmployeeDashboard = () => {
     }
   };
 
+  const handleStartBreak = async () => {
+    if (!session || (session.status !== 'active' && session.status !== 'idle')) return;
+    if (attendance?.isOnBreak) return; // prevent if already on break
+    setError('');
+    setLoadingBreak(true);
+    try {
+      await attendanceService.startBreak();
+      await fetchState();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoadingBreak(false);
+    }
+  };
+
+  const handleEndBreak = async () => {
+    if (!attendance?.isOnBreak) return;
+    setError('');
+    setLoadingBreak(true);
+    try {
+      await attendanceService.endBreak();
+      await fetchState();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoadingBreak(false);
+    }
+  };
+
   /* ── Derived state ─────────────────────────────────── */
   const isCheckedIn = !!attendance?.checkIn;
   const isCheckedOut = !!attendance?.checkOut;
   const sessionStatus = session?.status || 'not-started';
   const sessionActive = sessionStatus === 'active' || sessionStatus === 'idle';
+  const isBreakActive = !!attendance?.isOnBreak;
 
   /* ── Render ────────────────────────────────────────── */
   if (loadingInit) {
@@ -319,7 +334,7 @@ const EmployeeDashboard = () => {
               <span className="dash-stat-label">Break Time</span>
             </div>
             <div className="dash-stat-value">
-              {formatMinutes(session?.idleDuration)}
+              {formatMinutes(attendance?.breakDuration)}
             </div>
           </div>
 
@@ -441,31 +456,32 @@ const EmployeeDashboard = () => {
 
               {/* Checked in but no session yet */}
               {isCheckedIn && !session && !isCheckedOut && (
-                <button
-                  className="dash-btn primary"
-                  onClick={handleStartWork}
-                  disabled={loadingStart || agentConnecting}
-                  id="btn-start-work"
-                >
-                  <Play size={14} />
-                  {agentConnecting ? 'Waiting for Agent...' : loadingStart ? 'Starting…' : 'Start Work'}
-                </button>
+                <>
+                  <button
+                    className="dash-btn primary"
+                    onClick={handleStartWork}
+                    disabled={loadingStart || agentConnecting}
+                    id="btn-start-work"
+                  >
+                    <Play size={14} />
+                    {agentConnecting ? 'Waiting for Agent...' : loadingStart ? 'Starting…' : 'Start Work'}
+                  </button>
+                  <button
+                    className="dash-btn warning"
+                    onClick={() => {}}
+                    disabled={true}
+                    id="btn-start-break"
+                  >
+                    <Pause size={14} />
+                    Start Break
+                  </button>
+                </>
               )}
 
               {/* Active session — show activity controls */}
               {sessionActive && (
                 <>
-                  {sessionStatus === 'active' && (
-                    <button
-                      className="dash-btn warning"
-                      onClick={() => handleActivity('idle')}
-                      disabled={loadingActivity}
-                      id="btn-mark-idle"
-                    >
-                      <Pause size={14} />
-                      {loadingActivity ? 'Updating…' : 'Mark Idle'}
-                    </button>
-                  )}
+
                   {sessionStatus === 'idle' && (
                     <button
                       className="dash-btn success"
@@ -486,6 +502,27 @@ const EmployeeDashboard = () => {
                     <Square size={14} />
                     {loadingEnd ? 'Ending…' : 'End Work'}
                   </button>
+                  {isBreakActive ? (
+                    <button
+                      className="dash-btn primary"
+                      onClick={handleEndBreak}
+                      disabled={loadingBreak}
+                      id="btn-end-break"
+                    >
+                      <Play size={14} />
+                      {loadingBreak ? 'Ending Break…' : 'End Break'}
+                    </button>
+                  ) : (
+                    <button
+                      className="dash-btn warning"
+                      onClick={handleStartBreak}
+                      disabled={loadingBreak}
+                      id="btn-start-break"
+                    >
+                      <Pause size={14} />
+                      {loadingBreak ? 'Starting Break…' : 'Start Break'}
+                    </button>
+                  )}
                 </>
               )}
 
@@ -508,6 +545,45 @@ const EmployeeDashboard = () => {
                 </span>
               )}
             </div>
+          </div>
+
+          {/* ── Card C: My Shift ───────────────── */}
+          <div className="dash-card">
+            <div className="dash-card-header">
+              <div className="dash-card-icon"><Clock size={16} /></div>
+              <p className="dash-card-title">My Shift</p>
+            </div>
+            
+            {!user?.shift ? (
+              <div className="attendance-row" style={{ justifyContent: 'center', padding: '20px 0' }}>
+                <span className="attendance-label" style={{ fontStyle: 'italic', color: '#64748b' }}>No shift assigned</span>
+              </div>
+            ) : (
+              <>
+                <div className="attendance-row">
+                  <span className="attendance-label">Shift Name</span>
+                  <span className="attendance-value" style={{ fontWeight: '500' }}>{user.shift.name}</span>
+                </div>
+                <div className="attendance-row">
+                  <span className="attendance-label">Time</span>
+                  <span className="attendance-value">{user.shift.startTime} - {user.shift.endTime}</span>
+                </div>
+                <div className="attendance-row">
+                  <span className="attendance-label">Working Days</span>
+                  <span className="attendance-value" style={{ fontSize: '12px', textAlign: 'right' }}>{user.shift.workingDays?.join(', ')}</span>
+                </div>
+                {user.shift.extraBreaks && user.shift.extraBreaks.length > 0 && (
+                  <div className="attendance-row" style={{ alignItems: 'flex-start' }}>
+                    <span className="attendance-label">Breaks</span>
+                    <div className="attendance-value" style={{ display: 'flex', flexDirection: 'column', gap: '4px', textAlign: 'right' }}>
+                      {user.shift.extraBreaks.map((b, idx) => (
+                        <span key={idx} style={{ fontSize: '12px', color: '#64748b' }}>• {b.startTime} - {b.endTime}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
       </main>

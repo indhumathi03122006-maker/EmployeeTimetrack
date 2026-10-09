@@ -155,28 +155,6 @@ const CurrentActivity = () => {
                   </div>
                 </div>
 
-                <div className="btn-row">
-                  <button
-                    className="dash-btn success"
-                    onClick={() => handleActivity('active')}
-                    disabled={loadingActivity || sessionStatus === 'active'}
-                    id="ca-btn-mark-active"
-                    style={{ flex: 1 }}
-                  >
-                    <Play size={14} />
-                    {loadingActivity && sessionStatus !== 'active' ? 'Updating…' : 'Mark Active'}
-                  </button>
-                  <button
-                    className="dash-btn warning"
-                    onClick={() => handleActivity('idle')}
-                    disabled={loadingActivity || sessionStatus === 'idle'}
-                    id="ca-btn-mark-idle"
-                    style={{ flex: 1 }}
-                  >
-                    <Pause size={14} />
-                    {loadingActivity && sessionStatus !== 'idle' ? 'Updating…' : 'Mark Idle'}
-                  </button>
-                </div>
               </>
             ) : (
                <div style={{ marginTop: '14px', fontSize: '14px', color: '#64748b', lineHeight: '1.5' }}>

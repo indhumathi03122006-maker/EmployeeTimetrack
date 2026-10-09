@@ -1,6 +1,7 @@
 const { app, BrowserWindow } = require('electron');
 const path = require('path');
 const { startActivityDetection } = require('./activity/activityDetector');
+const { startAppTracking } = require('./activity/appTracker');
 const workSessionApi = require('./api/workSessionApi');
 const agentApi = require('./api/agentApi');
 const config = require('./config');
@@ -258,6 +259,9 @@ app.whenReady().then(() => {
         }
       }
     }, 60000);
+
+    // 5. Desktop Application Activity Tracking
+    startAppTracking(() => hasActiveSession, () => lastKnownStatus);
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow();

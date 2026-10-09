@@ -153,6 +153,28 @@ const Attendance = () => {
                     </span>
                   </div>
                   <div className="attendance-row">
+                    <span className="attendance-label">Arrival Status</span>
+                    <span className="attendance-value" style={{ 
+                      color: todayAttendance.isLate ? '#f59e0b' : '#22c55e',
+                      fontWeight: '500'
+                    }}>
+                      {todayAttendance.isLate ? 'Late Arrival' : 'On Time'}
+                    </span>
+                  </div>
+                  <div className="attendance-row">
+                    <span className="attendance-label">Departure Status</span>
+                    <span className="attendance-value" style={{
+                      color: !todayAttendance.checkOut 
+                        ? '#64748b' 
+                        : (todayAttendance.isEarlyCheckout ? '#ef4444' : '#22c55e'),
+                      fontWeight: '500'
+                    }}>
+                      {!todayAttendance.checkOut 
+                        ? 'Not Checked Out' 
+                        : (todayAttendance.isEarlyCheckout ? 'Early Checkout' : 'On Time')}
+                    </span>
+                  </div>
+                  <div className="attendance-row">
                     <span className="attendance-label">Work Duration</span>
                     <span className="attendance-value">{formatMinutes(todayAttendance.workDuration)}</span>
                   </div>

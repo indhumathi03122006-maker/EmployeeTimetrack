@@ -20,7 +20,26 @@ const formatDuration = (mins) => {
   return `${h}h ${m}m`;
 };
 
-const StatusBadge = ({ status }) => {
+const StatusBadge = ({ status, isOnBreak }) => {
+  if (isOnBreak) {
+    return (
+      <span style={{ 
+        background: '#f3f4f6', 
+        color: '#4b5563',
+        padding: '4px 10px',
+        borderRadius: '20px',
+        fontSize: '12px',
+        fontWeight: 600,
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '4px'
+      }}>
+        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#6b7280' }}></span>
+        On Break
+      </span>
+    );
+  }
+
   const map = {
     active:      { label: 'Active',      cls: 'active' },
     idle:        { label: 'Idle',        cls: 'idle' },
@@ -147,7 +166,7 @@ const ManagerCurrentActivity = () => {
                       <h4 style={{ margin: '0 0 4px', fontSize: '15px', color: '#0f172a' }}>{session.user?.name || 'Unknown'}</h4>
                       <div style={{ fontSize: '12px', color: '#64748b' }}>{session.user?.department || 'No Dept'}</div>
                     </div>
-                    <StatusBadge status={session.status} />
+                    <StatusBadge status={session.status} isOnBreak={session.attendance?.isOnBreak} />
                   </div>
                   
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '13px', background: '#ffffff', padding: '12px', borderRadius: '6px', border: '1px solid #f1f5f9' }}>

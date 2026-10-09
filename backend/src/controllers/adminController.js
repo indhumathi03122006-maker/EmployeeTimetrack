@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const User = require('../models/User');
 const Attendance = require('../models/Attendance');
 const WorkSession = require('../models/WorkSession');
+const Settings = require('../models/Settings');
 const createNotification = require('../utils/createNotification');
 const fillAbsentRecords = require('../utils/fillAbsent');
 
@@ -128,6 +129,7 @@ const getAllWorkSessions = async (req, res) => {
 
     const sessions = await WorkSession.find(query)
       .populate('user', 'name email department')
+      .populate('attendance', 'breakDuration')
       .sort({ startTime: -1 });
 
     const allEmployees = await User.find({ role: 'employee' });
@@ -145,11 +147,24 @@ const getAllWorkSessions = async (req, res) => {
 // @access  Private/Admin
 const getAllCurrentActivity = async (req, res) => {
   try {
-    const sessions = await WorkSession.find({
+    const sessionsRaw = await WorkSession.find({
       status: { $in: ['active', 'idle'] }
     })
       .populate('user', 'name email department')
+      .populate('attendance', 'isOnBreak')
       .sort({ lastActivityAt: -1 });
+
+    const now = Date.now();
+    const sessions = sessionsRaw.map(session => {
+      const sessionObj = session.toObject();
+      if (sessionObj.lastActivityAt) {
+        const diffMs = now - new Date(sessionObj.lastActivityAt).getTime();
+        if (diffMs > 5 * 60 * 1000) {
+          sessionObj.status = 'idle';
+        }
+      }
+      return sessionObj;
+    });
 
     res.json({ success: true, data: sessions });
   } catch (error) {
@@ -402,6 +417,82 @@ const updateUserStatus = async (req, res, next) => {
   }
 };
 
+// @desc    Get global company settings
+// @route   GET /api/admin/settings
+// @access  Private/Admin
+const getSettings = async (req, res, next) => {
+  try {
+    let settings = await Settings.findOne();
+    if (!settings) {
+      settings = await Settings.create({});
+    }
+    res.json({ success: true, data: settings });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Update global company settings
+// @route   PUT /api/admin/settings
+// @access  Private/Admin
+const updateSettings = async (req, res, next) => {
+  try {
+    const { workStartTime, workEndTime, workingDays, enableBreakSchedule, breakSchedule } = req.body;
+    
+    // Basic validation
+    const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+    if (workStartTime && !timeRegex.test(workStartTime)) {
+      return res.status(400).json({ success: false, message: 'Invalid workStartTime format. Use HH:mm' });
+    }
+    if (workEndTime && !timeRegex.test(workEndTime)) {
+      return res.status(400).json({ success: false, message: 'Invalid workEndTime format. Use HH:mm' });
+    }
+    
+    const validDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    if (workingDays) {
+      if (!Array.isArray(workingDays)) {
+        return res.status(400).json({ success: false, message: 'workingDays must be an array' });
+      }
+      for (const day of workingDays) {
+        if (!validDays.includes(day)) {
+          return res.status(400).json({ success: false, message: `Invalid day: ${day}` });
+        }
+      }
+    }
+
+    if (breakSchedule) {
+      if (!Array.isArray(breakSchedule)) {
+        return res.status(400).json({ success: false, message: 'breakSchedule must be an array' });
+      }
+      for (const breakSlot of breakSchedule) {
+        if (!breakSlot.startTime || !timeRegex.test(breakSlot.startTime)) {
+          return res.status(400).json({ success: false, message: 'Invalid break slot startTime. Use HH:mm' });
+        }
+        if (!breakSlot.endTime || !timeRegex.test(breakSlot.endTime)) {
+          return res.status(400).json({ success: false, message: 'Invalid break slot endTime. Use HH:mm' });
+        }
+      }
+    }
+
+    const updateData = {};
+    if (workStartTime) updateData.workStartTime = workStartTime;
+    if (workEndTime) updateData.workEndTime = workEndTime;
+    if (workingDays) updateData.workingDays = workingDays;
+    if (enableBreakSchedule !== undefined) updateData.enableBreakSchedule = enableBreakSchedule;
+    if (breakSchedule) updateData.breakSchedule = breakSchedule;
+
+    const settings = await Settings.findOneAndUpdate(
+      {},
+      { $set: updateData },
+      { new: true, upsert: true }
+    );
+
+    res.json({ success: true, data: settings });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getDashboardSummary,
   getAllEmployees,
@@ -412,5 +503,7 @@ module.exports = {
   addEmployee,
   addManager,
   updateUser,
-  updateUserStatus
+  updateUserStatus,
+  getSettings,
+  updateSettings
 };

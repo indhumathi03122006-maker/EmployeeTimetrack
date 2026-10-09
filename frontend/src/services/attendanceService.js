@@ -76,10 +76,40 @@ const getReport = async (startDate, endDate) => {
   }
 };
 
+// POST /api/attendance/break/start
+const startBreak = async () => {
+  try {
+    const response = await fetch(`${BASE_URL}/break/start`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+      });
+      const data = await handleResponse(response, 'Failed to start break');
+      return data;
+  } catch (error) {
+    handleFetchError(error);
+  }
+};
+
+// POST /api/attendance/break/end
+const endBreak = async () => {
+  try {
+    const response = await fetch(`${BASE_URL}/break/end`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+      });
+      const data = await handleResponse(response, 'Failed to end break');
+      return data;
+  } catch (error) {
+    handleFetchError(error);
+  }
+};
+
 export default {
   checkIn,
   checkOut,
   getTodayAttendance,
   getAttendanceHistory,
   getReport,
+  startBreak,
+  endBreak,
 };

@@ -56,7 +56,7 @@ function saveToken(token) {
 }
 
 module.exports = {
-  BACKEND_URL: 'http://43.204.149.49',
+  BACKEND_URL: process.env.BACKEND_URL || 'http://localhost:5000',
   get DEVELOPMENT_JWT() {
     return loadToken();
   },
