@@ -236,7 +236,7 @@ const AdminShift = () => {
       <AdminSidebar user={user} onLogout={handleLogout} unreadCount={unreadCount} />
       
       <main className="dashboard-main">
-        <div style={{ width: '90%', maxWidth: '900px', margin: '30px auto' }}>
+        <div className="shift-container" style={{ width: '100%', maxWidth: '900px', margin: '0 auto' }}>
           
           {errorMsg && (
             <div className="dash-error" style={{ marginBottom: '16px' }}>
@@ -249,8 +249,8 @@ const AdminShift = () => {
             </div>
           )}
 
-          <div className="dash-card" style={{ padding: '30px' }}>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '24px' }}>
+          <div className="dash-card shift-main-card" style={{ padding: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '24px', flexWrap: 'wrap', gap: '8px' }}>
               {!showForm ? (
                 <button className="dash-btn primary" onClick={() => setShowForm(true)}>
                   <Plus size={16} style={{ marginRight: '6px' }} /> Create New Shift
@@ -431,7 +431,7 @@ const AdminShift = () => {
                     No shifts found. Click "Create New Shift" to add one.
                   </div>
                 ) : (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '20px' }}>
+                  <div className="shift-cards-grid">
                     {shifts.map(shift => (
                       <div key={shift._id} style={{ border: '1px solid var(--border-color)', borderRadius: '8px', padding: '16px', background: 'var(--bg-primary)' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
@@ -457,7 +457,7 @@ const AdminShift = () => {
                             <Clock size={14} style={{ marginRight: '6px', color: 'var(--text-muted)' }} />
                             {shift.startTime} - {shift.endTime}
                           </div>
-                          <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px' }}>
+                          <div className="shift-working-days">
                             {shift.workingDays.join(', ')}
                           </div>
                           
@@ -472,7 +472,7 @@ const AdminShift = () => {
                             </div>
                           )}
 
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-light)', paddingTop: '12px' }}>
+                          <div className="shift-card-footer">
                             <div style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-primary)' }}>
                               Assigned Employees: {shift.assignedCount || 0}
                             </div>

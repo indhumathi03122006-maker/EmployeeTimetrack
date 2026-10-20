@@ -223,7 +223,7 @@ const AdminSettings = () => {
       <AdminSidebar user={user} onLogout={handleLogout} unreadCount={unreadCount} />
       
       <main className="dashboard-main">
-        <div style={{ width: '90%', maxWidth: '1000px', margin: '0 auto' }}>
+        <div className="settings-container" style={{ width: '100%', maxWidth: '1000px', margin: '0 auto' }}>
           <header className="dashboard-header" style={{ marginBottom: '24px' }}>
             <div>
               <h1 className="dashboard-page-title" style={{ marginBottom: '8px' }}>Settings</h1>
@@ -253,32 +253,31 @@ const AdminSettings = () => {
 
               {!isEditing ? (
                 <>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
-                    <div className="attendance-row" style={{ borderBottom: 'none', padding: '8px 0' }}>
-                      <span className="attendance-label" style={{ display: 'block', fontSize: '13px', marginBottom: '4px' }}>Name</span>
-                      <span className="attendance-value" style={{ fontWeight: '600', fontSize: '15px' }}>{user.name}</span>
+                  <div className="settings-profile-grid">
+                    <div className="settings-profile-item">
+                      <span className="settings-profile-label">Name</span>
+                      <span className="settings-profile-value">{user.name}</span>
                     </div>
-                    <div className="attendance-row" style={{ borderBottom: 'none', padding: '8px 0' }}>
-                      <span className="attendance-label" style={{ display: 'block', fontSize: '13px', marginBottom: '4px' }}>Email</span>
-                      <span className="attendance-value" style={{ fontSize: '15px' }}>{user.email}</span>
+                    <div className="settings-profile-item">
+                      <span className="settings-profile-label">Email</span>
+                      <span className="settings-profile-value">{user.email}</span>
                     </div>
-                    <div className="attendance-row" style={{ borderBottom: 'none', padding: '8px 0' }}>
-                      <span className="attendance-label" style={{ display: 'block', fontSize: '13px', marginBottom: '4px' }}>Department</span>
-                      <span className="attendance-value" style={{ fontSize: '15px' }}>{user.department || '—'}</span>
+                    <div className="settings-profile-item">
+                      <span className="settings-profile-label">Department</span>
+                      <span className="settings-profile-value">{user.department || '—'}</span>
                     </div>
-                    <div className="attendance-row" style={{ borderBottom: 'none', padding: '8px 0' }}>
-                      <span className="attendance-label" style={{ display: 'block', fontSize: '13px', marginBottom: '4px' }}>Role</span>
-                      <span className="attendance-value" style={{ textTransform: 'capitalize', fontSize: '15px' }}>{user.role}</span>
+                    <div className="settings-profile-item">
+                      <span className="settings-profile-label">Role</span>
+                      <span className="settings-profile-value" style={{ textTransform: 'capitalize' }}>{user.role}</span>
                     </div>
-                    <div className="attendance-row" style={{ borderBottom: 'none', padding: '8px 0' }}>
-                      <span className="attendance-label" style={{ display: 'block', fontSize: '13px', marginBottom: '4px' }}>Account Status</span>
-                      <span className="attendance-value">
+                    <div className="settings-profile-item">
+                      <span className="settings-profile-label">Account Status</span>
+                      <span className="settings-profile-value">
                         <span className={`status-badge ${user.isActive !== false ? 'active' : 'ended'}`}>
                           {user.isActive !== false ? 'Active' : 'Inactive'}
                         </span>
                       </span>
                     </div>
-                    <div className="attendance-row" style={{ borderBottom: 'none', padding: '8px 0' }}></div>
                   </div>
                   <div className="btn-row" style={{ marginTop: '20px', borderTop: '1px solid var(--border-light)', paddingTop: '20px' }}>
                     <button className="dash-btn primary" onClick={() => setIsEditing(true)}>Edit Profile</button>
@@ -286,7 +285,7 @@ const AdminSettings = () => {
                 </>
               ) : (
                 <form onSubmit={handleProfileSubmit}>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px' }}>
                     <div>
                       <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-muted)', marginBottom: '6px' }}>Name</label>
                       <input 
@@ -363,12 +362,12 @@ const AdminSettings = () => {
                 <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
                   Manage your account-related information and preferences.
                 </p>
-                <div className="attendance-row" style={{ borderBottom: 'none', padding: '8px 0' }}>
-                  <div style={{ flex: 1 }}>
+                <div className="settings-theme-row">
+                  <div className="settings-theme-info">
                     <span className="attendance-label" style={{ display: 'block', fontSize: '14px', color: 'var(--text-primary)', fontWeight: '600', marginBottom: '4px' }}>Appearance</span>
                     <span className="attendance-value" style={{ display: 'block', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '400' }}>Choose your preferred color theme.</span>
                   </div>
-                  <div style={{ display: 'flex', gap: '8px' }}>
+                  <div className="settings-theme-options">
                     <button 
                       onClick={() => setThemePreference('light')}
                       style={{ padding: '8px 12px', borderRadius: '8px', border: `1px solid ${themePreference === 'light' ? 'var(--accent-blue)' : 'var(--border-color)'}`, background: themePreference === 'light' ? 'var(--accent-blue-light)' : 'var(--bg-primary)', color: themePreference === 'light' ? 'var(--accent-blue)' : 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '500' }}>

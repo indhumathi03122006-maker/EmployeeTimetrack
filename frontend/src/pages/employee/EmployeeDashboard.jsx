@@ -20,6 +20,8 @@ import {
   Bell,
   Settings,
   Monitor,
+  Menu,
+  X,
 } from 'lucide-react';
 import SidebarBrand from '../../components/SidebarBrand';
 import './EmployeeDashboard.css';
@@ -39,56 +41,84 @@ const formatMinutes = (mins) => {
 };
 
 /* ── Sidebar shared component ─────────────────────────── */
-export const EmployeeSidebar = ({ user, onLogout, unreadCount = 0 }) => (
-  <aside className="dashboard-sidebar">
-    <SidebarBrand role="EMPLOYEE" />
+export const EmployeeSidebar = ({ user, onLogout, unreadCount = 0 }) => {
+  const [mobileOpen, setMobileOpen] = useState(false);
 
-    <nav className="sidebar-nav">
-      <NavLink to="/employee/dashboard" className={({ isActive }) => isActive ? 'active-link' : ''}>
-        <Home size={16} /> Dashboard
-      </NavLink>
-      <NavLink to="/employee/attendance" className={({ isActive }) => isActive ? 'active-link' : ''}>
-        <CalendarCheck size={16} /> Attendance
-      </NavLink>
-      <NavLink to="/employee/work-time" className={({ isActive }) => isActive ? 'active-link' : ''}>
-        <Timer size={16} /> Work Time
-      </NavLink>
-      <NavLink to="/employee/current-activity" className={({ isActive }) => isActive ? 'active-link' : ''}>
-        <Activity size={16} /> Current Activity
-      </NavLink>
-      <NavLink to="/employee/application-activity" className={({ isActive }) => isActive ? 'active-link' : ''}>
-        <Monitor size={16} /> Application Activity
-      </NavLink>
-      <NavLink to="/employee/reports" className={({ isActive }) => isActive ? 'active-link' : ''}>
-        <FileText size={16} /> Reports
-      </NavLink>
-      <NavLink to="/employee/notifications" className={({ isActive }) => isActive ? 'active-link' : ''}>
-        <Bell size={16} /> Notifications
-        {unreadCount > 0 && (
-          <span className="notif-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
-        )}
-      </NavLink>
-      <NavLink to="/employee/settings" className={({ isActive }) => isActive ? 'active-link' : ''}>
-        <Settings size={16} /> Settings
-      </NavLink>
-    </nav>
+  const closeMobile = () => setMobileOpen(false);
 
-    <div className="sidebar-footer">
-      <div className="sidebar-user-info">
-        <strong>{user?.name}</strong>
-        {user?.role}
-      </div>
-      {user?.role === 'manager' && (
-        <NavLink to="/manager/dashboard" className="dash-btn" style={{ marginBottom: '10px', display: 'flex', justifyContent: 'center', width: '100%' }}>
-          Manager View
-        </NavLink>
+  return (
+    <>
+      {/* Mobile Top Header (only visible <= 768px via CSS) */}
+      <header className="mobile-topbar">
+        <SidebarBrand role="EMPLOYEE" />
+        <button
+          className="mobile-menu-btn"
+          onClick={() => setMobileOpen((prev) => !prev)}
+          aria-label={mobileOpen ? 'Close navigation' : 'Open navigation'}
+        >
+          {mobileOpen ? <X size={20} /> : <Menu size={20} />}
+        </button>
+      </header>
+
+      {/* Backdrop for mobile drawer */}
+      {mobileOpen && (
+        <div className="sidebar-backdrop" onClick={closeMobile} />
       )}
-      <button className="dash-btn logout-btn" onClick={onLogout}>
-        <LogOut size={14} /> Logout
-      </button>
-    </div>
-  </aside>
-);
+
+      {/* Sidebar Drawer */}
+      <aside className={`dashboard-sidebar ${mobileOpen ? 'mobile-open' : ''}`}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+          <SidebarBrand role="EMPLOYEE" />
+        </div>
+
+        <nav className="sidebar-nav">
+          <NavLink to="/employee/dashboard" onClick={closeMobile} className={({ isActive }) => isActive ? 'active-link' : ''}>
+            <Home size={16} /> Dashboard
+          </NavLink>
+          <NavLink to="/employee/attendance" onClick={closeMobile} className={({ isActive }) => isActive ? 'active-link' : ''}>
+            <CalendarCheck size={16} /> Attendance
+          </NavLink>
+          <NavLink to="/employee/work-time" onClick={closeMobile} className={({ isActive }) => isActive ? 'active-link' : ''}>
+            <Timer size={16} /> Work Time
+          </NavLink>
+          <NavLink to="/employee/current-activity" onClick={closeMobile} className={({ isActive }) => isActive ? 'active-link' : ''}>
+            <Activity size={16} /> Current Activity
+          </NavLink>
+          <NavLink to="/employee/application-activity" onClick={closeMobile} className={({ isActive }) => isActive ? 'active-link' : ''}>
+            <Monitor size={16} /> Application Activity
+          </NavLink>
+          <NavLink to="/employee/reports" onClick={closeMobile} className={({ isActive }) => isActive ? 'active-link' : ''}>
+            <FileText size={16} /> Reports
+          </NavLink>
+          <NavLink to="/employee/notifications" onClick={closeMobile} className={({ isActive }) => isActive ? 'active-link' : ''}>
+            <Bell size={16} /> Notifications
+            {unreadCount > 0 && (
+              <span className="notif-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
+            )}
+          </NavLink>
+          <NavLink to="/employee/settings" onClick={closeMobile} className={({ isActive }) => isActive ? 'active-link' : ''}>
+            <Settings size={16} /> Settings
+          </NavLink>
+        </nav>
+
+        <div className="sidebar-footer">
+          <div className="sidebar-user-info">
+            <strong>{user?.name}</strong>
+            {user?.role}
+          </div>
+          {user?.role === 'manager' && (
+            <NavLink to="/manager/dashboard" onClick={closeMobile} className="dash-btn" style={{ marginBottom: '10px', display: 'flex', justifyContent: 'center', width: '100%' }}>
+              Manager View
+            </NavLink>
+          )}
+          <button className="dash-btn logout-btn" onClick={onLogout}>
+            <LogOut size={14} /> Logout
+          </button>
+        </div>
+      </aside>
+    </>
+  );
+};
 
 /* ── Status Badge ─────────────────────────────────────── */
 const StatusBadge = ({ status }) => {
